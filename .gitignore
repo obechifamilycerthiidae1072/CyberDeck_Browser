@@ -1,0 +1,40 @@
+# Build output
+build/
+build-*/
+out/
+cmake-build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Visual Studio / MSVC
+.vs/
+*.sln.docstates
+*.user
+*.vcxproj.user
+*.pdb
+*.ilk
+*.obj
+*.pch
+*.idb
+*.ipdb
+*.iobj
+
+# Runtime artifacts
+*.log
+*.tmp
+*.bak
+
+# Installer output
+dist/
+installer-output/
+
+# Local environment
+.env
+.env.*
+
+# Large third-party SDK drops should be documented and fetched/recreated.
+third_party/cef_binary*/
