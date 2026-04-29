@@ -1,0 +1,71 @@
+# CEF Setup
+
+CyberDeck Browser uses Chromium Embedded Framework (CEF) for normal web page
+rendering. CEF binaries are large and must not be committed directly to this
+repository.
+
+## Expected Layout
+
+Download an official CEF binary distribution and extract it under a local path
+such as:
+
+```text
+third_party/
+  cef_binary_<version>_windows64/
+    include/
+      cef_version.h
+```
+
+The exact CEF version must be recorded in `THIRD_PARTY_NOTICES.md` before CEF
+runtime files are bundled in a release.
+
+## Configure
+
+Without CEF headers, the current scaffold still builds as a launch-and-exit
+Windows executable:
+
+```powershell
+cmake -S . -B build
+cmake --build build
+```
+
+With CEF headers available:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCEF_ROOT="C:\path\to\cef_binary"
+cmake --build build
+```
+
+To require CEF during configure:
+
+```powershell
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCEF_ROOT="C:\path\to\cef_binary" -DCYBERDECK_REQUIRE_CEF=ON
+```
+
+The CMake integration expects a standard CEF binary distribution containing:
+
+```text
+include/cef_version.h
+cmake/FindCEF.cmake
+libcef_dll/CMakeLists.txt
+Debug/ or Release/ runtime binaries
+Resources/ runtime resource files
+```
+
+The build links the official `libcef_dll_wrapper` target and copies CEF runtime
+binaries/resources next to `CyberDeckBrowser.exe` after build.
+
+Official Windows CEF binaries require an MSVC-compatible build. MinGW builds
+remain useful for non-CEF scaffold checks, but they intentionally leave CEF
+disabled.
+
+## Download Helper
+
+Use `scripts/download_cef.ps1` only with an official CEF download URL that has
+been selected for this project:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_cef.ps1 -CefUrl "<official-cef-archive-url>"
+```
+
+Do not download or vendor CEF from mirrors or unknown repositories.
