@@ -10,15 +10,42 @@ yellow highlights, red warnings/actions, monospace controls, and optional CRT
 scanline/glow effects. OpenGL is used for the app shell and Deck Space, not as a
 replacement for Chromium rendering.
 
+## Promo Videos
+
+The repository includes compact x265 promo cuts captured from the portable CEF
+build:
+
+- [Promo with text overlays](docs/media/cyberdeck-browser-promo-withtext-x265.mp4)
+- [Promo without text overlays](docs/media/cyberdeck-browser-promo-notext-x265.mp4)
+
 ## Screenshots
 
-Screenshots are intentionally placeholder entries until the CEF-enabled release
-candidate is captured on a clean Windows 11 machine.
+| Terminal Mode | Nerdy Search |
+| --- | --- |
+| ![Google rendered with CyberDeck Terminal Mode](docs/screenshots/google-terminal-mode.jpg) | ![Google search for Hacker News and open-source browser topics](docs/screenshots/hacker-news-search.jpg) |
 
-- `docs/screenshots/browser-shell.png` - browser shell with toolbar, tabs, and
-  CEF content.
-- `docs/screenshots/deck-space.png` - Deck Space with saved Nodes.
-- `docs/screenshots/diagnostics.png` - settings/diagnostics panel.
+| Reddit | Deck Space |
+| --- | --- |
+| ![Reddit rendered with green terminal styling](docs/screenshots/reddit-terminal-mode.jpg) | ![Deck Space showing 3D bookmark Nodes](docs/screenshots/deck-space-nodes.jpg) |
+
+| Node Opened |
+| --- |
+| ![ChatGPT opened from a Deck Space Node](docs/screenshots/chatgpt-node-opened.jpg) |
+
+More usage notes are in [docs/USER_GUIDE.md](docs/USER_GUIDE.md). Media
+capture details are in [docs/MEDIA.md](docs/MEDIA.md).
+
+## Feature Overview
+
+- CEF-powered browsing for normal websites.
+- Native Win32 toolbar, tab strip, status panels, and diagnostics.
+- Terminal Mode CSS injection for black/green/yellow/red cyberdeck styling.
+- CRT shell effects: scanlines, glow, and flicker controls.
+- Local history, settings, logs, and Deck Space Nodes stored as JSON.
+- Deck Space: OpenGL 3D bookmark world with hex/cube/panel Nodes.
+- Node workflows: Add Node, select/open, edit, delete, layout switching.
+- OpenGL diagnostics for GPU vendor, renderer, and version.
+- Windows installer scaffolding through Inno Setup.
 
 ## Dependencies
 
@@ -143,6 +170,15 @@ fresh default file where recovery is implemented.
 
 Use `docs/QA_CHECKLIST.md` before tagging a release candidate. Use
 `docs/RELEASE_NOTES_TEMPLATE.md` to prepare release notes.
+
+Useful docs:
+
+- [User Guide](docs/USER_GUIDE.md)
+- [Bookmark Node Model](docs/BOOKMARK_NODE_MODEL.md)
+- [CEF Setup](docs/CEF_SETUP.md)
+- [Packaging](docs/PACKAGING.md)
+- [Promo Media](docs/MEDIA.md)
+- [QA Checklist](docs/QA_CHECKLIST.md)
 
 ## Known Limitations
 
