@@ -1,13 +1,13 @@
 # CEF Setup
 
 CyberDeck Browser uses Chromium Embedded Framework (CEF) for normal web page
-rendering. CEF binaries are large and must not be committed directly to this
-repository.
+rendering in the Windows browser application. CEF binaries are large and must
+not be committed directly to this repository.
 
 ## Expected Layout
 
-Download an official CEF binary distribution and extract it under a local path
-such as:
+Download an official CEF binary distribution and extract it under a local path.
+For Windows, a typical layout is:
 
 ```text
 third_party/
@@ -59,13 +59,55 @@ Official Windows CEF binaries require an MSVC-compatible build. MinGW builds
 remain useful for non-CEF scaffold checks, but they intentionally leave CEF
 disabled.
 
+## Linux Status
+
+Linux support is separated from the Windows app path. The non-CEF Linux core
+launcher remains `CyberDeckBrowserLinux`, and the Linux CEF host is
+`CyberDeckBrowserLinuxCef`, installed as `cyberdeck-browser-cef`.
+
+Easy Ubuntu/WSL2 install:
+
+```bash
+./scripts/install_linux.sh --deps
+```
+
+That script downloads an official Linux CEF binary archive from the CEF
+Automated Builds CDN, extracts it under `third_party/cef/linux64`, configures
+with `-DCEF_ROOT=<that-path> -DCYBERDECK_REQUIRE_CEF=ON`, builds the separated
+Linux CEF target, runs tests, and creates a `cyberdeck-browser` wrapper under
+`~/.local/bin`.
+
+Manual Linux configure:
+
+```bash
+cmake -S . -B build-linux-cef -DCMAKE_BUILD_TYPE=Release -DCEF_ROOT="$PWD/third_party/cef/linux64" -DCYBERDECK_REQUIRE_CEF=ON
+cmake --build build-linux-cef --parallel
+./build-linux-cef/cyberdeck-browser-cef "https://www.example.com"
+```
+
+Linux CEF code lives under `src/platform/linux`. Do not put Linux CEF hosting
+inside the existing Win32 browser host.
+
 ## Download Helper
 
-Use `scripts/download_cef.ps1` only with an official CEF download URL that has
-been selected for this project:
+Use `scripts/download_cef.ps1` on Windows only with an official CEF download URL
+that has been selected for this project:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\download_cef.ps1 -CefUrl "<official-cef-archive-url>"
 ```
 
 Do not download or vendor CEF from mirrors or unknown repositories.
+
+On Linux, prefer:
+
+```bash
+./scripts/install_linux.sh --deps
+```
+
+or pass a specific official archive URL:
+
+```bash
+CEF_URL="https://cef-builds.spotifycdn.com/<official-linux64-archive>.tar.bz2" \
+  ./scripts/install_linux.sh --force-cef
+```

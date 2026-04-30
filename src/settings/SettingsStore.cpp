@@ -1,6 +1,6 @@
 #include "settings/SettingsStore.h"
 
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <algorithm>
 #include <chrono>
@@ -18,49 +18,11 @@ namespace cyberdeck::settings {
 namespace {
 
 std::string WideToUtf8(const std::wstring& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::string output(static_cast<std::size_t>(required), '\0');
-    WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required,
-        nullptr,
-        nullptr);
-    return output;
+    return common::WideToUtf8(value);
 }
 
 std::wstring Utf8ToWide(const std::string& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), nullptr, 0);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::wstring output(static_cast<std::size_t>(required), L'\0');
-    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), output.data(), required);
-    return output;
+    return common::Utf8ToWide(value);
 }
 
 std::string NarrowForLog(const std::filesystem::path& path) {
@@ -251,22 +213,7 @@ bool IsValidSettings(const UserSettings& settings) {
 }  // namespace
 
 std::filesystem::path SettingsStore::DefaultSettingsPath() {
-    DWORD required = GetEnvironmentVariableW(L"APPDATA", nullptr, 0);
-    std::filesystem::path root;
-    if (required > 0) {
-        std::wstring app_data(required, L'\0');
-        const DWORD copied = GetEnvironmentVariableW(L"APPDATA", app_data.data(), required);
-        if (copied > 0) {
-            app_data.resize(copied);
-            root = app_data;
-        }
-    }
-
-    if (root.empty()) {
-        root = std::filesystem::current_path() / "dev" / "appdata";
-    }
-
-    return root / "CyberDeckBrowser" / "settings.json";
+    return common::AppDataDirectory() / "settings.json";
 }
 
 bool SettingsStore::Initialize(std::filesystem::path settings_path, common::Logger& logger) {
@@ -406,7 +353,7 @@ bool SettingsStore::WriteLocked() {
         }
     }
 
-    if (!MoveFileExW(temp_path.c_str(), settings_path_.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(temp_path, settings_path_)) {
         std::filesystem::remove(temp_path, error);
         return false;
     }
@@ -424,7 +371,7 @@ bool SettingsStore::RenameCorruptedFileLocked() {
         settings_path_.parent_path() /
         (settings_path_.filename().wstring() + L".corrupt." + Utf8ToWide(CurrentFileTimestamp()) + L".bak");
 
-    if (!MoveFileExW(settings_path_.c_str(), corrupted_path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(settings_path_, corrupted_path)) {
         return false;
     }
 

@@ -1,6 +1,6 @@
 #include "deck/BookmarkStore.h"
 
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <algorithm>
 #include <chrono>
@@ -296,61 +296,11 @@ private:
 };
 
 std::string WideToUtf8(const std::wstring& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::string output(static_cast<std::size_t>(required), '\0');
-    WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required,
-        nullptr,
-        nullptr);
-    return output;
+    return common::WideToUtf8(value);
 }
 
 std::wstring Utf8ToWide(const std::string& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::wstring output(static_cast<std::size_t>(required), L'\0');
-    MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required);
-    return output;
+    return common::Utf8ToWide(value);
 }
 
 std::string NarrowForLog(const std::filesystem::path& path) {
@@ -441,6 +391,19 @@ std::optional<int> IntField(const JsonValue::Object& object, std::string_view ke
     return result;
 }
 
+std::optional<bool> BoolField(const JsonValue::Object& object, std::string_view key) {
+    const auto found = object.find(std::string(key));
+    if (found == object.end()) {
+        return std::nullopt;
+    }
+
+    const bool* value = std::get_if<bool>(&found->second.value);
+    if (value == nullptr) {
+        return std::nullopt;
+    }
+    return *value;
+}
+
 void WriteJsonValue(std::ostream& output, const JsonValue& value) {
     if (std::holds_alternative<std::nullptr_t>(value.value)) {
         output << "null";
@@ -510,25 +473,75 @@ bool AreValidNodes(const std::vector<BookmarkNode>& nodes) {
     });
 }
 
+BookmarkNode MakeDefaultBookmark(
+    std::wstring id,
+    std::wstring title,
+    std::wstring url,
+    BookmarkNodeShapeType shape_type,
+    BookmarkNodeColorTheme color_theme,
+    BookmarkNodePosition deck_position,
+    std::vector<std::wstring> tags,
+    const std::string& timestamp) {
+    BookmarkNode node;
+    node.id = std::move(id);
+    node.title = std::move(title);
+    node.url = std::move(url);
+    node.shape_type = shape_type;
+    node.color_theme = color_theme;
+    node.created_utc = timestamp;
+    node.updated_utc = timestamp;
+    node.visit_count = 0;
+    node.deck_position = deck_position;
+    node.tags = std::move(tags);
+    return node;
+}
+
+std::vector<BookmarkNode> CreateDefaultBookmarks() {
+    const std::string timestamp = CurrentBookmarkNodeUtcTimestamp();
+    return {
+        MakeDefaultBookmark(
+            L"default-google",
+            L"Google",
+            L"https://www.google.com",
+            BookmarkNodeShapeType::Hex,
+            BookmarkNodeColorTheme::Green,
+            BookmarkNodePosition{.x = -1.8f, .y = 0.05f, .z = 0.15f},
+            {L"default", L"search"},
+            timestamp),
+        MakeDefaultBookmark(
+            L"default-reddit",
+            L"Reddit",
+            L"https://www.reddit.com",
+            BookmarkNodeShapeType::Panel,
+            BookmarkNodeColorTheme::Red,
+            BookmarkNodePosition{.x = -0.6f, .y = 0.0f, .z = -0.35f},
+            {L"default", L"community"},
+            timestamp),
+        MakeDefaultBookmark(
+            L"default-github",
+            L"GitHub",
+            L"https://github.com",
+            BookmarkNodeShapeType::Cube,
+            BookmarkNodeColorTheme::Yellow,
+            BookmarkNodePosition{.x = 0.6f, .y = 0.0f, .z = -0.35f},
+            {L"default", L"code"},
+            timestamp),
+        MakeDefaultBookmark(
+            L"default-chatgpt",
+            L"ChatGPT",
+            L"https://chatgpt.com",
+            BookmarkNodeShapeType::Hex,
+            BookmarkNodeColorTheme::Mixed,
+            BookmarkNodePosition{.x = 1.8f, .y = 0.05f, .z = 0.15f},
+            {L"default", L"ai"},
+            timestamp),
+    };
+}
+
 }  // namespace
 
 std::filesystem::path BookmarkStore::DefaultBookmarksPath() {
-    DWORD required = GetEnvironmentVariableW(L"APPDATA", nullptr, 0);
-    std::filesystem::path root;
-    if (required > 0) {
-        std::wstring app_data(required, L'\0');
-        const DWORD copied = GetEnvironmentVariableW(L"APPDATA", app_data.data(), required);
-        if (copied > 0) {
-            app_data.resize(copied);
-            root = app_data;
-        }
-    }
-
-    if (root.empty()) {
-        root = std::filesystem::current_path() / "dev" / "appdata";
-    }
-
-    return root / "CyberDeckBrowser" / "bookmarks.json";
+    return common::AppDataDirectory() / "bookmarks.json";
 }
 
 bool BookmarkStore::Initialize(std::filesystem::path bookmarks_path, common::Logger& logger) {
@@ -536,6 +549,7 @@ bool BookmarkStore::Initialize(std::filesystem::path bookmarks_path, common::Log
     logger_ = &logger;
     bookmarks_path_ = std::move(bookmarks_path);
     nodes_.clear();
+    defaults_seeded_ = false;
 
     if (!LoadLocked()) {
         if (!RenameCorruptedFileLocked()) {
@@ -543,6 +557,7 @@ bool BookmarkStore::Initialize(std::filesystem::path bookmarks_path, common::Log
             return false;
         }
         nodes_.clear();
+        defaults_seeded_ = true;
         if (!WriteLocked()) {
             logger_->Error("Unable to write clean bookmark file after corruption recovery.");
             return false;
@@ -569,6 +584,7 @@ bool BookmarkStore::SaveBookmarks(std::vector<BookmarkNode> nodes) {
     }
 
     nodes_ = std::move(nodes);
+    defaults_seeded_ = true;
     const bool written = WriteLocked();
     if (!written) {
         logger_->Error("Failed to write bookmarks.");
@@ -594,6 +610,7 @@ bool BookmarkStore::AddBookmark(BookmarkNode node) {
     }
 
     nodes_.push_back(std::move(node));
+    defaults_seeded_ = true;
     const bool written = WriteLocked();
     if (!written) {
         nodes_.pop_back();
@@ -621,6 +638,7 @@ bool BookmarkStore::UpdateBookmark(BookmarkNode node) {
 
     BookmarkNode previous = *found;
     *found = std::move(node);
+    defaults_seeded_ = true;
     const bool written = WriteLocked();
     if (!written) {
         *found = std::move(previous);
@@ -645,6 +663,7 @@ bool BookmarkStore::DeleteBookmark(std::wstring_view id) {
     BookmarkNode removed = std::move(*found);
     const auto index = static_cast<std::size_t>(std::distance(nodes_.begin(), found));
     nodes_.erase(found);
+    defaults_seeded_ = true;
     const bool written = WriteLocked();
     if (!written) {
         nodes_.insert(nodes_.begin() + static_cast<std::ptrdiff_t>(index), std::move(removed));
@@ -683,6 +702,8 @@ bool BookmarkStore::LoadLocked() {
 
     std::error_code error;
     if (!std::filesystem::exists(bookmarks_path_, error)) {
+        nodes_ = CreateDefaultBookmarks();
+        defaults_seeded_ = true;
         return WriteLocked();
     }
 
@@ -712,6 +733,7 @@ bool BookmarkStore::LoadLocked() {
     if (!version || *version != 1) {
         return fail("version field is missing or unsupported");
     }
+    const std::optional<bool> defaults_seeded = BoolField(*root, "defaultsSeeded");
 
     const auto nodes_found = root->find("nodes");
     if (nodes_found == root->end()) {
@@ -743,6 +765,15 @@ bool BookmarkStore::LoadLocked() {
     }
 
     nodes_ = std::move(loaded);
+    defaults_seeded_ = defaults_seeded.value_or(false);
+    if (nodes_.empty() && !defaults_seeded_) {
+        nodes_ = CreateDefaultBookmarks();
+        defaults_seeded_ = true;
+        return WriteLocked();
+    }
+    if (!nodes_.empty()) {
+        defaults_seeded_ = true;
+    }
     return true;
 }
 
@@ -766,6 +797,7 @@ bool BookmarkStore::WriteLocked() {
 
         output << "{\n";
         output << "  \"version\": 1,\n";
+        output << "  \"defaultsSeeded\": " << (defaults_seeded_ ? "true" : "false") << ",\n";
         output << "  \"nodes\": [\n";
         for (std::size_t index = 0; index < nodes_.size(); ++index) {
             output << IndentJson(BookmarkNodeToJson(nodes_[index]), "    ");
@@ -779,7 +811,7 @@ bool BookmarkStore::WriteLocked() {
         }
     }
 
-    if (!MoveFileExW(temp_path.c_str(), bookmarks_path_.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(temp_path, bookmarks_path_)) {
         std::filesystem::remove(temp_path, error);
         return false;
     }
@@ -797,7 +829,7 @@ bool BookmarkStore::RenameCorruptedFileLocked() {
         bookmarks_path_.parent_path() /
         (bookmarks_path_.filename().wstring() + L".corrupt." + Utf8ToWide(CurrentFileTimestamp()) + L".bak");
 
-    if (!MoveFileExW(bookmarks_path_.c_str(), corrupted_path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(bookmarks_path_, corrupted_path)) {
         return false;
     }
 

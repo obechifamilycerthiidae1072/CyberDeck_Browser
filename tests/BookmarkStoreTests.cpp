@@ -1,6 +1,7 @@
 #include "deck/BookmarkStore.h"
 
 #include "common/Logger.h"
+#include "common/Platform.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -8,13 +9,12 @@
 #include <iostream>
 #include <sstream>
 #include <utility>
-#include <windows.h>
 
 namespace {
 
 std::filesystem::path TestRoot() {
     return std::filesystem::temp_directory_path() /
-           ("CyberDeckBookmarkStoreTests-" + std::to_string(GetCurrentProcessId()));
+           ("CyberDeckBookmarkStoreTests-" + std::to_string(cyberdeck::common::CurrentProcessId()));
 }
 
 bool Expect(bool condition, const char* message) {
@@ -30,6 +30,18 @@ bool WriteText(const std::filesystem::path& path, const std::string& text) {
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     output << text;
     return output.good();
+}
+
+bool HasBookmark(
+    const std::vector<cyberdeck::deck::BookmarkNode>& nodes,
+    std::wstring_view id,
+    std::wstring_view url) {
+    for (const cyberdeck::deck::BookmarkNode& node : nodes) {
+        if (node.id == id && node.url == url) {
+            return true;
+        }
+    }
+    return false;
 }
 
 cyberdeck::deck::BookmarkNode TestNode(std::wstring id, std::wstring title, std::wstring url) {
@@ -64,7 +76,24 @@ int main() {
     {
         cyberdeck::deck::BookmarkStore store;
         passed = Expect(store.Initialize(bookmarks_path, logger), "Initialize should create a bookmark file.") && passed;
-        passed = Expect(store.LoadBookmarks().empty(), "New bookmark file should start empty.") && passed;
+        const auto default_nodes = store.LoadBookmarks();
+        passed = Expect(default_nodes.size() == 4, "New bookmark file should start with default bookmarks.") && passed;
+        passed = Expect(
+                     HasBookmark(default_nodes, L"default-google", L"https://www.google.com"),
+                     "Default bookmarks should include Google.") &&
+                 passed;
+        passed = Expect(
+                     HasBookmark(default_nodes, L"default-reddit", L"https://www.reddit.com"),
+                     "Default bookmarks should include Reddit.") &&
+                 passed;
+        passed = Expect(
+                     HasBookmark(default_nodes, L"default-github", L"https://github.com"),
+                     "Default bookmarks should include GitHub.") &&
+                 passed;
+        passed = Expect(
+                     HasBookmark(default_nodes, L"default-chatgpt", L"https://chatgpt.com"),
+                     "Default bookmarks should include ChatGPT.") &&
+                 passed;
 
         auto node = TestNode(L"node-example", L"Example Domain", L"https://example.com");
         passed = Expect(store.AddBookmark(node), "AddBookmark should persist a valid node.") && passed;
@@ -89,22 +118,24 @@ int main() {
         cyberdeck::deck::BookmarkStore store;
         passed = Expect(store.Initialize(bookmarks_path, logger), "Initialize should reload saved bookmarks.") && passed;
         const auto nodes = store.LoadBookmarks();
-        passed = Expect(nodes.size() == 1, "Saved bookmarks should survive restart.") && passed;
-        if (!nodes.empty()) {
-            passed = Expect(nodes[0].title == L"Example Updated", "Updated title should survive restart.") && passed;
-            passed = Expect(nodes[0].url == L"https://example.org", "Updated URL should survive restart.") && passed;
+        passed = Expect(nodes.size() == 5, "Saved bookmarks and defaults should survive restart.") && passed;
+        const auto updated_node = store.FindBookmarkById(L"node-example");
+        passed = Expect(updated_node.has_value(), "Updated bookmark should survive restart.") && passed;
+        if (updated_node) {
+            passed = Expect(updated_node->title == L"Example Updated", "Updated title should survive restart.") && passed;
+            passed = Expect(updated_node->url == L"https://example.org", "Updated URL should survive restart.") && passed;
             passed = Expect(
-                         nodes[0].shape_type == cyberdeck::deck::BookmarkNodeShapeType::Cube,
+                         updated_node->shape_type == cyberdeck::deck::BookmarkNodeShapeType::Cube,
                          "Updated shape should survive restart.") &&
                      passed;
             passed = Expect(
-                         nodes[0].color_theme == cyberdeck::deck::BookmarkNodeColorTheme::Yellow,
+                         updated_node->color_theme == cyberdeck::deck::BookmarkNodeColorTheme::Yellow,
                          "Updated color should survive restart.") &&
                      passed;
-            passed = Expect(nodes[0].tags.size() == 2, "Updated tags should survive restart.") && passed;
+            passed = Expect(updated_node->tags.size() == 2, "Updated tags should survive restart.") && passed;
         }
 
-        auto opened = nodes.empty() ? cyberdeck::deck::BookmarkNode{} : nodes[0];
+        auto opened = updated_node.value_or(cyberdeck::deck::BookmarkNode{});
         opened.last_visited_utc = "2026-04-29T04:20:00Z";
         opened.updated_utc = "2026-04-29T04:20:00Z";
         opened.visit_count += 1;
@@ -119,12 +150,42 @@ int main() {
         }
 
         passed = Expect(store.DeleteBookmark(L"node-example"), "DeleteBookmark should persist removal.") && passed;
+        passed = Expect(store.LoadBookmarks().size() == 4, "Default bookmarks should remain after deleting one custom node.") &&
+                 passed;
+        passed = Expect(store.SaveBookmarks({}), "SaveBookmarks should allow the user to remove all bookmarks.") && passed;
     }
 
     {
         cyberdeck::deck::BookmarkStore store;
         passed = Expect(store.Initialize(bookmarks_path, logger), "Initialize should reload after delete.") && passed;
-        passed = Expect(store.LoadBookmarks().empty(), "Deleted bookmark should not reappear after restart.") && passed;
+        passed = Expect(
+                     store.LoadBookmarks().empty(),
+                     "Default bookmarks should not reappear after the user saves an empty list.") &&
+                 passed;
+    }
+
+    {
+        const std::filesystem::path legacy_empty_path = root / "CyberDeckBrowser" / "legacy-empty-bookmarks.json";
+        passed = Expect(
+                     WriteText(legacy_empty_path, "{\n  \"version\": 1,\n  \"nodes\": []\n}\n"),
+                     "Test should write legacy empty bookmark storage.") &&
+                 passed;
+
+        cyberdeck::deck::BookmarkStore store;
+        passed = Expect(store.Initialize(legacy_empty_path, logger), "Legacy empty storage should initialize.") && passed;
+        passed = Expect(
+                     store.LoadBookmarks().size() == 4,
+                     "Legacy empty storage should receive default bookmarks once.") &&
+                 passed;
+        passed = Expect(store.SaveBookmarks({}), "Legacy defaults should be removable by saving an empty list.") && passed;
+
+        cyberdeck::deck::BookmarkStore reloaded;
+        passed = Expect(reloaded.Initialize(legacy_empty_path, logger), "Legacy path should reload after empty save.") &&
+                 passed;
+        passed = Expect(
+                     reloaded.LoadBookmarks().empty(),
+                     "Legacy default bookmarks should not reappear after empty save.") &&
+                 passed;
     }
 
     {

@@ -1,19 +1,19 @@
 #include "history/HistoryStore.h"
 
 #include "common/Logger.h"
+#include "common/Platform.h"
 
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <windows.h>
 
 namespace {
 
 std::filesystem::path TestRoot() {
     return std::filesystem::temp_directory_path() /
-           ("CyberDeckHistoryStoreTests-" + std::to_string(GetCurrentProcessId()));
+           ("CyberDeckHistoryStoreTests-" + std::to_string(cyberdeck::common::CurrentProcessId()));
 }
 
 bool Expect(bool condition, const char* message) {

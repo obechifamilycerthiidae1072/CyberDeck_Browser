@@ -1,9 +1,10 @@
 #include "history/HistoryStore.h"
 
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <algorithm>
 #include <chrono>
+#include <climits>
 #include <cctype>
 #include <cstdio>
 #include <fstream>
@@ -309,8 +310,10 @@ std::string CurrentUtcTimestamp() {
     std::tm utc_time{};
 #if defined(_MSC_VER)
     gmtime_s(&utc_time, &time);
-#else
+#elif defined(__MINGW32__)
     gmtime_s(&utc_time, &time);
+#else
+    gmtime_r(&time, &utc_time);
 #endif
 
     std::ostringstream output;
@@ -325,8 +328,10 @@ std::string CurrentFileTimestamp() {
     std::tm local_time{};
 #if defined(_MSC_VER)
     localtime_s(&local_time, &time);
-#else
+#elif defined(__MINGW32__)
     localtime_s(&local_time, &time);
+#else
+    localtime_r(&time, &local_time);
 #endif
 
     std::ostringstream output;
@@ -345,61 +350,11 @@ std::string NarrowForLog(const std::filesystem::path& path) {
 }
 
 std::string WideToUtf8(const std::wstring& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::string output(static_cast<std::size_t>(required), '\0');
-    WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required,
-        nullptr,
-        nullptr);
-    return output;
+    return common::WideToUtf8(value);
 }
 
 std::wstring Utf8ToWide(const std::string& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::wstring output(static_cast<std::size_t>(required), L'\0');
-    MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required);
-    return output;
+    return common::Utf8ToWide(value);
 }
 
 std::string EscapeJsonString(const std::wstring& value) {
@@ -496,22 +451,7 @@ bool IsUsableEntry(const HistoryEntry& entry) {
 }  // namespace
 
 std::filesystem::path HistoryStore::DefaultHistoryPath() {
-    DWORD required = GetEnvironmentVariableW(L"APPDATA", nullptr, 0);
-    std::filesystem::path root;
-    if (required > 0) {
-        std::wstring app_data(required, L'\0');
-        const DWORD copied = GetEnvironmentVariableW(L"APPDATA", app_data.data(), required);
-        if (copied > 0) {
-            app_data.resize(copied);
-            root = app_data;
-        }
-    }
-
-    if (root.empty()) {
-        root = std::filesystem::current_path() / "dev" / "appdata";
-    }
-
-    return root / "CyberDeckBrowser" / "history.json";
+    return common::AppDataDirectory() / "history.json";
 }
 
 bool HistoryStore::Initialize(std::filesystem::path history_path, common::Logger& logger) {
@@ -711,7 +651,7 @@ bool HistoryStore::WriteLocked() {
         }
     }
 
-    if (!MoveFileExW(temp_path.c_str(), history_path_.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(temp_path, history_path_)) {
         std::filesystem::remove(temp_path, error);
         return false;
     }
@@ -729,7 +669,7 @@ bool HistoryStore::RenameCorruptedFileLocked() {
         history_path_.parent_path() /
         (history_path_.filename().wstring() + L".corrupt." + Utf8ToWide(CurrentFileTimestamp()) + L".bak");
 
-    if (!MoveFileExW(history_path_.c_str(), corrupted_path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    if (!common::ReplaceFile(history_path_, corrupted_path)) {
         return false;
     }
 

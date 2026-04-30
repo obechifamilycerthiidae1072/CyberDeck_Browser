@@ -46,6 +46,7 @@ Persistent Nodes live in `%APPDATA%\CyberDeckBrowser\bookmarks.json`:
 ```json
 {
   "version": 1,
+  "defaultsSeeded": true,
   "nodes": []
 }
 ```
@@ -54,6 +55,10 @@ The bookmark store writes atomically through a temporary file and replaces the
 main file with `MoveFileExW` using write-through semantics. If storage JSON is
 corrupted or contains invalid Nodes, the file is renamed with a timestamped
 `.corrupt.*.bak` suffix and a clean empty `bookmarks.json` is created.
+
+When `bookmarks.json` does not exist yet, the store seeds default Nodes for
+Google, Reddit, GitHub, and ChatGPT. After the file exists, the store treats it
+as user-owned and does not re-seed deleted defaults.
 
 The `ADD NODE` toolbar action creates a v1 Node from the active tab title and
 URL, using a hex shape and mixed green/yellow color by default. Duplicate URLs

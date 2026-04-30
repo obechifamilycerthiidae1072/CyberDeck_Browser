@@ -1,6 +1,6 @@
 #include "deck/FaviconStore.h"
 
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <algorithm>
 #include <cctype>
@@ -128,21 +128,7 @@ std::string PlaceholderSvg(std::string_view host, char initial) {
 }  // namespace
 
 std::filesystem::path FaviconStore::DefaultFaviconsDirectory() {
-    DWORD required = GetEnvironmentVariableW(L"APPDATA", nullptr, 0);
-    std::filesystem::path root;
-    if (required > 0) {
-        std::wstring app_data(required, L'\0');
-        const DWORD copied = GetEnvironmentVariableW(L"APPDATA", app_data.data(), required);
-        if (copied > 0) {
-            app_data.resize(copied);
-            root = app_data;
-        }
-    }
-
-    if (root.empty()) {
-        root = std::filesystem::current_path() / "dev" / "appdata";
-    }
-    return root / "CyberDeckBrowser" / "favicons";
+    return common::AppDataDirectory() / "favicons";
 }
 
 std::optional<std::wstring> FaviconStore::EnsurePlaceholderFavicon(

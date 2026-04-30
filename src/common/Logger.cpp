@@ -1,6 +1,6 @@
 #include "common/Logger.h"
 
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <chrono>
 #include <ctime>
@@ -48,29 +48,10 @@ std::string CurrentFileTimestamp() {
     return output.str();
 }
 
-std::wstring Utf8ToWide(std::string_view value) {
-    return std::wstring(value.begin(), value.end());
-}
-
 }  // namespace
 
 std::filesystem::path Logger::DefaultLogPath() {
-    DWORD required = GetEnvironmentVariableW(L"APPDATA", nullptr, 0);
-    std::filesystem::path root;
-    if (required > 0) {
-        std::wstring app_data(required, L'\0');
-        const DWORD copied = GetEnvironmentVariableW(L"APPDATA", app_data.data(), required);
-        if (copied > 0) {
-            app_data.resize(copied);
-            root = app_data;
-        }
-    }
-
-    if (root.empty()) {
-        root = std::filesystem::current_path() / "dev" / "appdata";
-    }
-
-    return root / "CyberDeckBrowser" / "logs" / "cyberdeck.log";
+    return AppDataDirectory() / "logs" / "cyberdeck.log";
 }
 
 bool Logger::Initialize(const std::filesystem::path& log_path) {
@@ -115,7 +96,7 @@ bool Logger::RotateIfNeeded(const std::filesystem::path& log_path) const {
 
     const std::filesystem::path rotated =
         log_path.parent_path() /
-        (log_path.stem().wstring() + L"." + Utf8ToWide(CurrentFileTimestamp()) + log_path.extension().wstring());
+        (log_path.stem().wstring() + L"." + common::Utf8ToWide(CurrentFileTimestamp()) + log_path.extension().wstring());
     std::filesystem::rename(log_path, rotated, error);
     return !error;
 }

@@ -38,6 +38,7 @@ private:
     std::filesystem::path bookmarks_path_;
     common::Logger* logger_ = nullptr;
     std::vector<BookmarkNode> nodes_;
+    bool defaults_seeded_ = false;
 };
 
 }  // namespace cyberdeck::deck

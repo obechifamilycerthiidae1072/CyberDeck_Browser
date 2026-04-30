@@ -1,6 +1,7 @@
 # Windows Packaging
 
 CyberDeck Browser uses Inno Setup for Windows installer packaging.
+Linux packaging is intentionally separate and is not implemented yet.
 
 ## Build Release Binaries
 
@@ -59,3 +60,9 @@ requiring Inno Setup:
   installer staging directory.
 - Recheck CEF/Chromium notices before public distribution.
 - Test install, launch, and uninstall on a clean Windows 11 VM.
+
+## Linux Packaging Status
+
+The Linux build currently produces the separated `cyberdeck-browser` core
+launcher only. Future AppImage, deb, rpm, or Flatpak packaging should live in a
+Linux-specific packaging path and should not modify the Inno Setup workflow.

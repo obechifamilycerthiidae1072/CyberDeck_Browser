@@ -1,0 +1,34 @@
+# Keep development-only material out of GitHub-generated source archives.
+/tests export-ignore
+/tests/** export-ignore
+/Promts export-ignore
+/Promts/** export-ignore
+"/Global Read For coder" export-ignore
+"/Global Read For coder/**" export-ignore
+
+# Local assistant state, diagnostics, and capture output.
+/.codex export-ignore
+/.codex/** export-ignore
+/captures export-ignore
+/captures/** export-ignore
+/screenshots export-ignore
+/screenshots/** export-ignore
+*.xwd export-ignore
+*.ppm export-ignore
+*.raw export-ignore
+
+# Rebuildable build trees and third-party SDK drops.
+/build export-ignore
+/build/** export-ignore
+/build-* export-ignore
+/build-*/** export-ignore
+/cmake-build-* export-ignore
+/cmake-build-*/** export-ignore
+/out export-ignore
+/out/** export-ignore
+/third_party/cef export-ignore
+/third_party/cef/** export-ignore
+/third_party/cef-downloads export-ignore
+/third_party/cef-downloads/** export-ignore
+/third_party/cef_binary* export-ignore
+/third_party/cef_binary*/** export-ignore

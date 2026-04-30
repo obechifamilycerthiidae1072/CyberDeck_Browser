@@ -1,8 +1,7 @@
 #include "deck/BookmarkNode.h"
 
 #include "browser/UrlNavigation.h"
-
-#include <windows.h>
+#include "common/Platform.h"
 
 #include <algorithm>
 #include <chrono>
@@ -315,61 +314,11 @@ bool StartsWith(std::wstring_view value, std::wstring_view prefix) {
 }
 
 std::string WideToUtf8(const std::wstring& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0,
-        nullptr,
-        nullptr);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::string output(static_cast<std::size_t>(required), '\0');
-    WideCharToMultiByte(
-        CP_UTF8,
-        WC_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required,
-        nullptr,
-        nullptr);
-    return output;
+    return common::WideToUtf8(value);
 }
 
 std::wstring Utf8ToWide(const std::string& value) {
-    if (value.empty()) {
-        return {};
-    }
-
-    const int required = MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        nullptr,
-        0);
-    if (required <= 0) {
-        return {};
-    }
-
-    std::wstring output(static_cast<std::size_t>(required), L'\0');
-    MultiByteToWideChar(
-        CP_UTF8,
-        MB_ERR_INVALID_CHARS,
-        value.data(),
-        static_cast<int>(value.size()),
-        output.data(),
-        required);
-    return output;
+    return common::Utf8ToWide(value);
 }
 
 std::string EscapeJsonString(const std::wstring& value) {
@@ -584,8 +533,10 @@ std::string CurrentBookmarkNodeUtcTimestamp() {
     std::tm utc_time{};
 #if defined(_MSC_VER)
     gmtime_s(&utc_time, &time);
-#else
+#elif defined(__MINGW32__)
     gmtime_s(&utc_time, &time);
+#else
+    gmtime_r(&time, &utc_time);
 #endif
 
     std::ostringstream output;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "browser/BrowserHost.h"
+#include "browser/BrowserTypes.h"
 
 #include <optional>
 #include <string>

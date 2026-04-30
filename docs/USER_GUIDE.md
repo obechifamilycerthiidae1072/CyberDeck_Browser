@@ -51,6 +51,7 @@ styles because modern pages often ship their own complex CSS.
 ## Deck Space
 
 Deck Space is the 3D bookmark system. Bookmarks are called Nodes.
+Fresh profiles start with default Nodes for Google, Reddit, GitHub, and ChatGPT.
 
 1. Browse to a page.
 2. Wait for the real page title to appear.

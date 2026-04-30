@@ -27,6 +27,11 @@ compile_commands.json
 *.log
 *.tmp
 *.bak
+*.xwd
+*.ppm
+*.raw
+/captures/
+/screenshots/
 
 # Installer output
 dist/
@@ -36,5 +41,19 @@ installer-output/
 .env
 .env.*
 
+# Local AI assistant state / memories. Keep the committed Promts/ material.
+.codex
+.codex/
+.codex-*/
+.claude/
+.cursor/
+.windsurf/
+.aider*
+*.aider.chat.history.md
+*.ai-memory.*
+*.chat-session.*
+
 # Large third-party SDK drops should be documented and fetched/recreated.
+third_party/cef/
+third_party/cef-downloads/
 third_party/cef_binary*/
