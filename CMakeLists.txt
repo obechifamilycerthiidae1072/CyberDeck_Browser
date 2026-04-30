@@ -112,6 +112,7 @@ if(WIN32)
     target_link_libraries(CyberDeckBrowser
         PRIVATE
             CyberDeckCore
+            CyberDeckPlatform
             dwmapi
             gdi32
             ole32

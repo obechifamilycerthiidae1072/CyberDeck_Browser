@@ -92,9 +92,8 @@ Important files:
 - `favicons\`
 - `logs\cyberdeck.log`
 
-The portable package launcher redirects app-level data into its own
-`CyberdeckPortable\Data` folder. CEF internal profile/cache portability still
-needs a future source-level CEF settings change.
+The portable package launcher sets `CYBERDECK_APPDATA_DIR` so app data and the
+CEF profile/cache live in the portable package's `Data` folder.
 
 ## Diagnostics
 

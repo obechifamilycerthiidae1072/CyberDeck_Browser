@@ -11,6 +11,10 @@ the release notes.
 - [ ] Confirm the build was produced with the intended CEF distribution.
 - [ ] Confirm `libcef.dll` and CEF resource files are present in the installer
   staging directory before compiling the installer.
+- [ ] Run `scripts\verify_windows_media_runtime.ps1` against the installer
+  staging app and the extracted portable app.
+- [ ] Confirm whether the CEF distribution supports H.264/AAC. If it does not,
+  release notes must list Reddit/MP4 media playback as a known limitation.
 
 ## Fresh Install
 
@@ -40,6 +44,18 @@ the release notes.
   back to DuckDuckGo search.
 - [ ] Try a blocked unsafe scheme such as `javascript:alert(1)`; verify it is
   blocked and does not execute.
+
+## Media Playback
+
+- [ ] Toggle `TERM` off for media tests.
+- [ ] Open `https://www.youtube.com/html5` and record reported codec support.
+- [ ] Run `scripts\test_windows_media_playback.ps1` and confirm H.264/AAC
+  support passes for codec-enabled releases.
+- [ ] Play a normal YouTube video for at least 30 seconds.
+- [ ] Play a Reddit-hosted video for at least 30 seconds.
+- [ ] Confirm audio, pause/resume, seek, fullscreen, and tab switching.
+- [ ] Check `%APPDATA%\CyberDeckBrowser\logs\cyberdeck.log` after any media
+  failure.
 
 ## Tabs And Navigation
 

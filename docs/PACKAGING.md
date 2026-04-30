@@ -5,6 +5,43 @@ Linux packaging is intentionally separate and is not implemented yet.
 
 ## Build Release Binaries
 
+Recommended one-command Windows release build:
+
+```powershell
+.\scripts\build_windows_release.ps1 -SkipInstaller
+```
+
+That script downloads the default official Windows CEF binary distribution when
+`-CefRoot` is not supplied, builds CyberDeck Browser with CEF required, stages
+installer files, verifies the CEF runtime, and creates a portable zip under
+`dist\release-assets`.
+
+To build with a codec-enabled CEF distribution that you have licensed and trust:
+
+```powershell
+.\scripts\build_windows_release.ps1 `
+  -CefUrl "https://example.com/cef_binary_<codec-enabled>_windows64.tar.bz2" `
+  -CodecEnabledCef `
+  -AcceptCodecResponsibility
+```
+
+or:
+
+```powershell
+.\scripts\build_windows_release.ps1 `
+  -CefRoot "C:\path\to\codec-enabled-cef" `
+  -CodecEnabledCef `
+  -AcceptCodecResponsibility
+```
+
+Use `-SkipInstaller` when Inno Setup is not installed or when you only need the
+portable zip and installer staging folder.
+
+When `-CodecEnabledCef` is supplied, the release helper also runs
+`scripts\test_windows_media_playback.ps1` unless `-SkipMediaProbe` is supplied.
+
+Manual release build:
+
 ```powershell
 .\scripts\build_release.ps1
 ```
@@ -19,6 +56,11 @@ The CMake CEF integration copies required CEF runtime files into the build
 output when CEF is configured with a compatible MSVC generator. The installer
 script stages everything next to `CyberDeckBrowser.exe`, so CEF runtime files
 must already be present in the release build output before packaging.
+
+Media support depends on the selected CEF build. Reddit and many YouTube
+streams require H.264/AAC support, which is not guaranteed by the default CEF
+binary distribution. See [Windows Media Playback](WINDOWS_MEDIA.md) before
+uploading release assets.
 
 ## Package Installer
 
@@ -42,6 +84,15 @@ requiring Inno Setup:
 .\scripts\package_installer.ps1 -SkipCompile
 ```
 
+The packaging script fails when required CEF runtime files are missing. To
+intentionally package the non-CEF placeholder build, pass `-AllowPlaceholder`.
+
+To verify an extracted portable package or staging directory:
+
+```powershell
+.\scripts\verify_windows_media_runtime.ps1 -AppDir "dist\installer-staging\app"
+```
+
 ## Installer Behavior
 
 - Installs program files under Program Files when elevated, with Inno Setup's
@@ -56,6 +107,13 @@ requiring Inno Setup:
 ## Release Checklist
 
 - Build with the intended CEF runtime and verify `libcef.dll` is staged.
+- Run `scripts\verify_windows_media_runtime.ps1` against the staged installer
+  app and the extracted portable app.
+- Run `scripts\test_windows_media_playback.ps1` against the built executable
+  before claiming Reddit/MP4 video support.
+- Confirm whether the selected CEF build supports H.264/AAC. If it does, run
+  YouTube and Reddit video smoke tests. If it does not, document that limitation
+  in the release notes.
 - Confirm `LICENSE`, `THIRD_PARTY_NOTICES.md`, and `README.md` are in the
   installer staging directory.
 - Recheck CEF/Chromium notices before public distribution.

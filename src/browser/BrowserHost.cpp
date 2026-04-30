@@ -1,11 +1,13 @@
 #include "browser/BrowserHost.h"
 
+#include "common/Platform.h"
 #include "browser/UrlNavigation.h"
 #include "ui/Theme.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <optional>
+#include <cwchar>
 #include <string>
 #include <utility>
 
@@ -13,6 +15,7 @@
 #include "include/cef_app.h"
 #include "include/cef_browser.h"
 #include "include/cef_client.h"
+#include "include/cef_command_line.h"
 #include "include/cef_download_handler.h"
 #include "include/cef_permission_handler.h"
 #include "include/cef_request_handler.h"
@@ -59,8 +62,46 @@ std::string NarrowForLog(std::wstring_view value) {
     return value.size() >= prefix.size() && value.substr(0, prefix.size()) == prefix;
 }
 
+[[maybe_unused]] bool Contains(std::wstring_view value, std::wstring_view needle) {
+    return value.find(needle) != std::wstring_view::npos;
+}
+
+[[maybe_unused]] std::wstring ToAsciiLower(std::wstring_view value) {
+    std::wstring lowered(value);
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](wchar_t ch) {
+        return ch >= L'A' && ch <= L'Z' ? static_cast<wchar_t>(ch + (L'a' - L'A')) : ch;
+    });
+    return lowered;
+}
+
 #if defined(CYBERDECK_HAS_CEF)
 constexpr wchar_t kProtocolDialogClassName[] = L"CyberDeckProtocolWarningDialog";
+
+bool IsMalformedAdClickPopup(std::wstring_view url) {
+    const std::wstring lower = ToAsciiLower(url);
+    const bool known_ad_click =
+        StartsWith(lower, L"https://www.googleadservices.com/pagead/aclk") ||
+        StartsWith(lower, L"https://googleads.g.doubleclick.net/pagead/aclk");
+    if (!known_ad_click) {
+        return false;
+    }
+
+    return Contains(lower, L"%5b") || Contains(lower, L"[") ||
+           Contains(lower, L"label=video_click_to_advertiser_site");
+}
+
+bool ShouldSkipTerminalModeForUrl(std::wstring_view url) {
+    const std::wstring lower = ToAsciiLower(url);
+    return Contains(lower, L"://www.youtube.com/") ||
+           Contains(lower, L"://youtube.com/") ||
+           Contains(lower, L"://youtu.be/") ||
+           Contains(lower, L"://www.reddit.com/") ||
+           Contains(lower, L"://reddit.com/") ||
+           Contains(lower, L"://v.redd.it/") ||
+           Contains(lower, L"://www.twitch.tv/") ||
+           Contains(lower, L"://twitch.tv/") ||
+           Contains(lower, L"://vimeo.com/");
+}
 
 struct ProtocolDialogData {
     std::wstring url;
@@ -309,6 +350,23 @@ std::wstring DefaultDownloadsDirectory() {
 
     return (std::filesystem::current_path() / L"downloads").wstring();
 }
+
+std::optional<int> EnvironmentPort(const wchar_t* name) {
+    wchar_t buffer[32]{};
+    constexpr DWORD buffer_count = static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0]));
+    const DWORD copied = GetEnvironmentVariableW(name, buffer, buffer_count);
+    if (copied == 0 || copied >= buffer_count) {
+        return std::nullopt;
+    }
+
+    wchar_t* end = nullptr;
+    const long value = std::wcstol(buffer, &end, 10);
+    if (end == buffer || *end != L'\0' || value <= 0 || value > 65535) {
+        return std::nullopt;
+    }
+
+    return static_cast<int>(value);
+}
 #endif
 
 [[maybe_unused]] std::wstring SafeDownloadFileName(std::wstring suggested_name) {
@@ -435,6 +493,8 @@ std::wstring ErrorCodeName(int error_code) {
             return L"ERR_INTERNET_DISCONNECTED";
         case -107:
             return L"ERR_SSL_PROTOCOL_ERROR";
+        case -108:
+            return L"ERR_ADDRESS_INVALID";
         case -109:
             return L"ERR_ADDRESS_UNREACHABLE";
         case -118:
@@ -466,6 +526,8 @@ std::wstring FriendlyErrorExplanation(int error_code) {
         case -102:
         case -118:
             return L"The remote server did not answer the connection request.";
+        case -108:
+            return L"The page tried to open an invalid network address. CyberDeck will keep popup navigation inside the current browser tab.";
         case -200:
         case -201:
         case -202:
@@ -876,13 +938,19 @@ struct BrowserHost::Impl {
             return;
         }
 
+        const bool should_enable = enabled && !ShouldSkipTerminalModeForUrl(tab.state.url);
         frame->ExecuteJavaScript(
-            CefString(enabled ? TerminalModeInjectionScript() : TerminalModeRemovalScript()),
+            CefString(should_enable ? TerminalModeInjectionScript() : TerminalModeRemovalScript()),
             CefString(std::wstring(L"cyberdeck://terminal-mode")),
             0);
-        logger->Info(
-            std::string(enabled ? "Applied" : "Removed") +
-            " Terminal Mode CSS for tab " + std::to_string(tab.state.id) + ".");
+        if (enabled && !should_enable) {
+            logger->Info(
+                "Skipped Terminal Mode CSS for media-heavy URL in tab " + std::to_string(tab.state.id) + ".");
+        } else {
+            logger->Info(
+                std::string(should_enable ? "Applied" : "Removed") +
+                " Terminal Mode CSS for tab " + std::to_string(tab.state.id) + ".");
+        }
 #else
         (void)tab;
         (void)enabled;
@@ -957,6 +1025,16 @@ struct BrowserHost::Impl {
     public:
         App() = default;
 
+        void OnBeforeCommandLineProcessing(const CefString&, CefRefPtr<CefCommandLine> command_line) override {
+            if (!command_line) {
+                return;
+            }
+
+            command_line->AppendSwitch("disable-extensions");
+            command_line->AppendSwitch("disable-component-extensions-with-background-pages");
+            command_line->AppendSwitch("disable-features=AutofillActorMode,GlicActorUi,LensOverlay");
+        }
+
     private:
         IMPLEMENT_REFCOUNTING(App);
     };
@@ -1012,6 +1090,55 @@ struct BrowserHost::Impl {
                 tab->browser = nullptr;
             }
             owner_.logger->Info("CEF browser view closed for tab " + std::to_string(tab_id_) + ".");
+        }
+
+        bool OnBeforePopup(
+            CefRefPtr<CefBrowser>,
+            CefRefPtr<CefFrame>,
+            int,
+            const CefString& target_url,
+            const CefString&,
+            CefLifeSpanHandler::WindowOpenDisposition,
+            bool user_gesture,
+            const CefPopupFeatures&,
+            CefWindowInfo&,
+            CefRefPtr<CefClient>&,
+            CefBrowserSettings&,
+            CefRefPtr<CefDictionaryValue>&,
+            bool* no_javascript_access) override {
+            if (no_javascript_access != nullptr) {
+                *no_javascript_access = true;
+            }
+
+            const std::wstring url = target_url.ToWString();
+            if (url.empty() || StartsWith(url, L"about:blank")) {
+                owner_.logger->Info("Blocked empty popup for tab " + std::to_string(tab_id_) + ".");
+                return true;
+            }
+
+            if (owner_.HandleProtocolNavigation(url, "OnBeforePopup", user_gesture)) {
+                return true;
+            }
+
+            if (IsMalformedAdClickPopup(url)) {
+                owner_.logger->Info(
+                    "Blocked malformed ad click popup for tab " + std::to_string(tab_id_) +
+                    " to " + NarrowForLog(url) + ".");
+                return true;
+            }
+
+            if (!user_gesture) {
+                owner_.logger->Info(
+                    "Blocked script-created popup for tab " + std::to_string(tab_id_) +
+                    " to " + NarrowForLog(url) + ".");
+                return true;
+            }
+
+            owner_.logger->Info(
+                "Opening popup navigation in active CyberDeck tab " + std::to_string(tab_id_) +
+                " to " + NarrowForLog(url) + ".");
+            owner_.LoadIntoActive(url);
+            return true;
         }
 
         void OnAddressChange(CefRefPtr<CefBrowser>, CefRefPtr<CefFrame> frame, const CefString& url) override {
@@ -1374,6 +1501,21 @@ BrowserHost::InitializeResult BrowserHost::Initialize(HINSTANCE instance, common
     CefSettings settings;
     settings.no_sandbox = true;
     settings.multi_threaded_message_loop = true;
+    settings.persist_session_cookies = true;
+    if (const auto remote_debugging_port = EnvironmentPort(L"CYBERDECK_CEF_REMOTE_DEBUGGING_PORT")) {
+        settings.remote_debugging_port = *remote_debugging_port;
+        logger.Info("CEF remote debugging enabled on 127.0.0.1:" + std::to_string(*remote_debugging_port) + ".");
+    }
+
+    const std::filesystem::path cef_data_dir = common::AppDataDirectory() / "cef";
+    const std::filesystem::path cef_cache_dir = cef_data_dir / "cache";
+    const std::filesystem::path cef_log_path = common::AppDataDirectory() / "logs" / "cef.log";
+    std::error_code cef_path_error;
+    std::filesystem::create_directories(cef_cache_dir, cef_path_error);
+    std::filesystem::create_directories(cef_log_path.parent_path(), cef_path_error);
+    CefString(&settings.root_cache_path).FromWString(cef_data_dir.wstring());
+    CefString(&settings.cache_path).FromWString(cef_cache_dir.wstring());
+    CefString(&settings.log_file).FromWString(cef_log_path.wstring());
 
     const bool initialized = CefInitialize(main_args, settings, impl_->app, nullptr);
     if (!initialized) {

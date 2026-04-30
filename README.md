@@ -129,6 +129,13 @@ Release build helper:
 .\scripts\build_release.ps1 -CefRoot "C:\path\to\cef_binary" -RequireCef
 ```
 
+Full Windows release helper, including CEF download, CEF-required build,
+runtime verification, installer staging, and portable zip:
+
+```powershell
+.\scripts\build_windows_release.ps1 -SkipInstaller
+```
+
 Placeholder non-CEF build:
 
 ```powershell
@@ -217,14 +224,13 @@ Inside the app:
 CyberDeck Browser uses Inno Setup for Windows installer packaging.
 
 ```powershell
-.\scripts\build_release.ps1 -CefRoot "C:\path\to\cef_binary" -RequireCef
-.\scripts\package_installer.ps1
+.\scripts\build_windows_release.ps1
 ```
 
 If Inno Setup is not on `PATH`, pass the compiler path:
 
 ```powershell
-.\scripts\package_installer.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+.\scripts\build_windows_release.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 ```
 
 To stage files without compiling the installer:
@@ -283,6 +289,7 @@ Useful docs:
 - [CEF Setup](docs/CEF_SETUP.md)
 - [Linux Install Guide](README_LINUX.md)
 - [Linux Support Notes](docs/LINUX.md)
+- [Windows Media Playback](docs/WINDOWS_MEDIA.md)
 - [Packaging](docs/PACKAGING.md)
 - [Promo Media](docs/MEDIA.md)
 - [QA Checklist](docs/QA_CHECKLIST.md)
@@ -296,6 +303,8 @@ Useful docs:
 - Real favicon capture from CEF is not implemented yet; Deck Space currently
   uses local placeholder favicon badges.
 - Deck Space thumbnails are not implemented.
+- Reddit and some YouTube video playback require a Windows CEF build with
+  H.264/AAC codec support and the related licensing cleared.
 - Installer compilation requires Inno Setup 6 on the packaging machine.
 - The installer is not signed and there is no auto-update channel.
 - No clean Windows VM install/uninstall pass has been completed in this

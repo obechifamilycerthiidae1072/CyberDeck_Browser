@@ -36,6 +36,13 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCEF_ROOT="C:\path\to\cef
 cmake --build build
 ```
 
+Or use the Windows release helper to download the default official CEF build
+and produce a CEF-enabled release package:
+
+```powershell
+.\scripts\build_windows_release.ps1 -SkipInstaller
+```
+
 To require CEF during configure:
 
 ```powershell
@@ -54,6 +61,19 @@ Resources/ runtime resource files
 
 The build links the official `libcef_dll_wrapper` target and copies CEF runtime
 binaries/resources next to `CyberDeckBrowser.exe` after build.
+
+### Windows Media Codecs
+
+CEF setup also decides what media codecs CyberDeck can play. The default CEF
+binary distribution can render normal pages, but H.264/AVC and AAC support may
+be absent because Chromium treats them as proprietary codecs. Reddit and some
+YouTube streams rely on those formats.
+
+For a Windows release that claims Reddit/YouTube video playback support, build
+and package against a CEF distribution produced from official source with the
+required proprietary codec support enabled, then clear the related licensing
+requirements. Keep the exact CEF version and codec build flags in the release
+notes and third-party notices. More detail is in `docs/WINDOWS_MEDIA.md`.
 
 Official Windows CEF binaries require an MSVC-compatible build. MinGW builds
 remain useful for non-CEF scaffold checks, but they intentionally leave CEF
