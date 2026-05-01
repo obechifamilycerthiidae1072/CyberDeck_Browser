@@ -16,6 +16,13 @@ That script downloads the default official Windows CEF binary distribution when
 installer files, verifies the CEF runtime, and creates a portable zip under
 `dist\release-assets`.
 
+For release candidates, pass the release identifier explicitly so generated
+portable archives match the Git tag:
+
+```powershell
+.\scripts\build_windows_release.ps1 -Version "0.1.0-rc3" -SkipInstaller
+```
+
 To build with a codec-enabled CEF distribution that you have licensed and trust:
 
 ```powershell
@@ -76,7 +83,9 @@ If `ISCC.exe` is not on `PATH`, pass it explicitly:
 .\scripts\package_installer.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 ```
 
-The generated installer is written to `dist\CyberDeckBrowserSetup-0.1.0.exe`.
+The generated installer is written to `dist\release-assets` using the version
+from `installer\CyberDeckBrowser.iss`, for example
+`CyberDeckBrowserSetup-0.1.0-rc3.exe`.
 Use `-SkipCompile` to prepare and inspect `dist\installer-staging\app` without
 requiring Inno Setup:
 
@@ -93,6 +102,12 @@ To verify an extracted portable package or staging directory:
 .\scripts\verify_windows_media_runtime.ps1 -AppDir "dist\installer-staging\app"
 ```
 
+The portable package contains `CyberdeckPortable.exe` as the primary launcher.
+It starts `App\CyberDeckBrowser.exe` and sets `CYBERDECK_APPDATA_DIR` so the
+CEF profile/cache, settings, history, bookmarks, favicons, and logs stay inside
+the portable package's `Data` folder. `CyberDeckBrowserPortable.cmd` is kept as
+a transparent fallback/debug launcher.
+
 ## Installer Behavior
 
 - Installs program files under Program Files when elevated, with Inno Setup's
@@ -107,6 +122,8 @@ To verify an extracted portable package or staging directory:
 ## Release Checklist
 
 - Build with the intended CEF runtime and verify `libcef.dll` is staged.
+- For release candidates, build with `-Version "<version-id>"` and confirm the
+  portable zip name matches the tag.
 - Run `scripts\verify_windows_media_runtime.ps1` against the staged installer
   app and the extracted portable app.
 - Run `scripts\test_windows_media_playback.ps1` against the built executable

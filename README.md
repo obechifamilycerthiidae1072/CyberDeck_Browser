@@ -48,9 +48,10 @@ covered separately in [README_LINUX.md](README_LINUX.md).
   Space projection.
 - Terminal Mode CSS injection for black/green/yellow/red cyberdeck styling.
 - CRT shell effects: scanlines, glow, and flicker controls.
-- Local history, settings, logs, and Deck Space Nodes stored as JSON.
-- Deck Space: 3D bookmark world with hex/cube/panel Nodes.
-- Fresh profiles start with default Nodes for Google, Reddit, GitHub, and ChatGPT.
+- Local history, settings, logs, Deck Space Vaults, and Nodes stored as JSON.
+- Deck Space: 3D bookmark world with Vaults and hex/cube/panel Nodes.
+- Fresh profiles start with five default Vaults and 19 starter Nodes.
+- Vault workflows: enter/leave, rename, delete, rotate, and keyboard zoom.
 - Node workflows: Add Node, select/open, edit, delete, layout switching.
 - OpenGL diagnostics for GPU vendor, renderer, and version.
 - Windows installer scaffolding through Inno Setup.
@@ -216,8 +217,10 @@ Inside the app:
 - `SCAN`, `GLOW`, and `FLK` adjust native CRT shell effects.
 - `SET` opens settings and diagnostics, including CEF state, data paths, render
   path, and log path.
-- In Deck Space, `Left`/`Right` selects Nodes, `Enter` opens, `Delete` removes,
-  and `L` cycles layout mode.
+- In Deck Space, `Left`/`Right` or the mouse wheel rotates Vaults/Nodes,
+  `Enter` opens the selected Vault or Node, `Backspace`/right click leaves a
+  Vault, `+`/`-` zooms, `Delete` removes after confirmation, and `L` cycles
+  Node layout mode.
 
 ## Packaging
 
@@ -270,7 +273,7 @@ Important files and folders:
 
 - `settings.json` - theme, shell, and Deck Space preferences.
 - `history.json` - local navigation history.
-- `bookmarks.json` - Deck Space Nodes.
+- `bookmarks.json` - Deck Space Vaults and Nodes.
 - `favicons/` - local placeholder favicon assets for Nodes.
 - `logs/cyberdeck.log` - diagnostics log with size-based rotation.
 
@@ -293,6 +296,7 @@ Useful docs:
 - [Packaging](docs/PACKAGING.md)
 - [Promo Media](docs/MEDIA.md)
 - [QA Checklist](docs/QA_CHECKLIST.md)
+- [v0.1.0-rc3 Release Notes](docs/RELEASE_NOTES_v0.1.0-rc3.md)
 
 ## Known Limitations
 

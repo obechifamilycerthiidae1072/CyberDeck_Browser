@@ -74,6 +74,24 @@ function Download-File {
     Invoke-WebRequest -Uri $Url -OutFile $Destination
 }
 
+function Find-CSharpCompiler {
+    $compiler = Get-Command "csc.exe" -ErrorAction SilentlyContinue
+    if ($null -ne $compiler) {
+        return $compiler.Source
+    }
+
+    foreach ($candidate in @(
+        "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe",
+        "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe"
+    )) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
 function Expand-CefArchive {
     param(
         [string]$ArchivePath,
@@ -160,6 +178,33 @@ if not exist "%CYBERDECK_APPDATA_DIR%" mkdir "%CYBERDECK_APPDATA_DIR%"
 start "" "%~dp0App\CyberDeckBrowser.exe" %*
 "@
     Set-Content -LiteralPath $launcherPath -Value $launcher -Encoding ASCII
+
+    $compiler = Find-CSharpCompiler
+    if ($null -eq $compiler) {
+        Write-Warning "C# compiler not found; portable EXE launcher was not created."
+        return
+    }
+
+    $sourcePath = Join-Path $script:RepoRoot "scripts\CyberDeckPortableLauncher.cs"
+    $exePath = Join-Path $PortableRoot "CyberdeckPortable.exe"
+    $iconPath = Join-Path $PortableRoot "CyberdeckPortable.ico"
+    $compileArgs = @(
+        "/nologo",
+        "/target:winexe",
+        "/platform:x64",
+        "/optimize+",
+        "/reference:System.Windows.Forms.dll",
+        "/out:$exePath",
+        $sourcePath
+    )
+    if (Test-Path -LiteralPath $iconPath -PathType Leaf) {
+        $compileArgs = @("/win32icon:$iconPath") + $compileArgs
+    }
+
+    & $compiler @compileArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Portable EXE launcher compilation failed."
+    }
 }
 
 function New-PortablePackage {
@@ -185,7 +230,13 @@ function New-PortablePackage {
         }
     }
 
-    foreach ($doc in @("docs\USER_GUIDE.md", "docs\WINDOWS_MEDIA.md", "docs\PACKAGING.md", "docs\QA_CHECKLIST.md")) {
+    foreach ($doc in @(
+        "docs\USER_GUIDE.md",
+        "docs\WINDOWS_MEDIA.md",
+        "docs\PACKAGING.md",
+        "docs\QA_CHECKLIST.md",
+        "docs\RELEASE_NOTES_TEMPLATE.md"
+    )) {
         $source = Join-Path $script:RepoRoot $doc
         if (Test-Path -LiteralPath $source -PathType Leaf) {
             $docDestination = Join-Path $PortableRoot $doc
@@ -193,6 +244,13 @@ function New-PortablePackage {
             Copy-Item -LiteralPath $source -Destination $docDestination -Force
         }
     }
+
+    Get-ChildItem -LiteralPath (Join-Path $script:RepoRoot "docs") -Filter "RELEASE_NOTES_v*.md" -File |
+        ForEach-Object {
+            $docDestination = Join-Path (Join-Path $PortableRoot "docs") $_.Name
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $docDestination) | Out-Null
+            Copy-Item -LiteralPath $_.FullName -Destination $docDestination -Force
+        }
 
     if (Test-Path -LiteralPath $ZipPath -PathType Leaf) {
         Remove-Item -LiteralPath $ZipPath -Force
