@@ -446,6 +446,7 @@ $packageArgs = @{
     Configuration = "Release"
     PackageDir = "dist\installer-staging"
     OutputDir = $OutputDir
+    Version = $Version
 }
 if ($IsccPath.Trim().Length -gt 0) {
     $packageArgs.IsccPath = $IsccPath

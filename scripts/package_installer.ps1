@@ -4,6 +4,7 @@ param(
     [string]$PackageDir = "dist\installer-staging",
     [string]$OutputDir = "dist",
     [string]$IsccPath = "",
+    [string]$Version = "0.1.0",
     [switch]$SkipCompile,
     [switch]$AllowPlaceholder
 )
@@ -243,6 +244,7 @@ $iscc = Resolve-Iscc -ExplicitPath $IsccPath
 
 Write-Host "Compiling installer with Inno Setup..."
 & $iscc `
+    "/DMyAppVersion=$Version" `
     "/DSourceDir=$appStage" `
     "/DOutputDir=$outputPath" `
     $issPath
