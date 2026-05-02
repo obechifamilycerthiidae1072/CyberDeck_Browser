@@ -13,12 +13,15 @@ Fix security issues without disturbing existing unique features (CSS, deck rende
 
 1) Harden CEF startup flags in Windows entry path
 - File: `src/browser/BrowserHost.cpp`
-- Change: default to secure sandbox behavior.
-- Keep current debug path behavior intact, but gate it.
+- Change: do not silently claim sandbox support until Windows bootstrap/sandbox-info
+  startup is wired.
+- Keep current executable startup behavior intact for the portable and installer
+  builds.
 - Implementation idea:
-  - `settings.no_sandbox` default to false.
-  - If legacy/untrusted override is needed, require explicit launch policy.
-  - Add clear log reason when sandbox is intentionally disabled.
+  - Keep `settings.no_sandbox` true for the current executable packaging.
+  - Add clear log reason while this compatibility mode is active.
+  - Re-enable sandboxing in a separate bootstrap/DLL packaging change with
+    `CefScopedSandboxInfo`/CEF bootstrap support.
 - Test: browser starts and loads current pages/decks normally.
 
 2) Restrict remote debug environment control

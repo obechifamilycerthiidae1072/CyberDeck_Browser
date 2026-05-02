@@ -23,13 +23,15 @@ Apply controls where trust boundaries exist:
 - File: `src/browser/BrowserHost.cpp`
 - Why this preserves features:
   - No CSS APIs changed.
-  - Sandbox flag only alters process isolation.
+  - Sandbox flag only alters process isolation when the Windows CEF bootstrap
+    launch path is correctly wired.
 - Suggested approach:
-  - Default `settings.no_sandbox = false`.
-  - If legacy compatibility requires `no_sandbox`, gate it behind an explicit safe launch switch:
-    - config/CLI flag
-    - documented developer override
-    - optional env allowlist and local-only warning.
+  - Keep `settings.no_sandbox = true` for the current executable packaging so
+    portable and installer builds continue to launch.
+  - Add an explicit startup log explaining that sandbox support is deferred until
+    the Windows bootstrap/sandbox-info launch path is implemented.
+  - Do not set `settings.no_sandbox = false` until `CefScopedSandboxInfo` or CEF
+    bootstrap support is wired and tested.
 
 3) Restrict remote debug activation
 - File: `src/browser/BrowserHost.cpp`
@@ -95,7 +97,7 @@ Apply controls where trust boundaries exist:
 - [ ] Confirm all existing CSS deck rendering features still load at startup.
 - [ ] Confirm no layout/theme/stylesheet behavior change using current test scenes.
 - [ ] Confirm Windows packaging still succeeds on clean build environment.
-- [ ] Confirm browser startup flags now show sandbox on by default in release profile.
+- [ ] Confirm browser startup remains compatible while sandbox bootstrap support is deferred.
 - [ ] Confirm remote debug remains usable under explicit developer opt-in.
 - [ ] Confirm malicious/incomplete JSON files no longer crash/hang and are handled gracefully.
 - [ ] Confirm Windows package cleanup cannot delete outside approved workspace.

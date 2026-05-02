@@ -49,6 +49,34 @@ function Get-CefRootFromArchiveName {
     return [System.IO.Path]::GetFileNameWithoutExtension($name)
 }
 
+function Normalize-DirectoryPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Path is empty."
+    }
+
+    return ([System.IO.Path]::GetFullPath($Path)).TrimEnd('\', '/')
+}
+
+function Assert-PathUnder {
+    param(
+        [string]$Path,
+        [string]$AllowedRoot
+    )
+
+    $fullPath = Normalize-DirectoryPath -Path $Path
+    $root = Normalize-DirectoryPath -Path $AllowedRoot
+    $separator = [IO.Path]::DirectorySeparatorChar
+    $rootWithSeparator = $root.TrimEnd($separator) + $separator
+
+    if ($fullPath -eq $root -or $fullPath.StartsWith($rootWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $fullPath
+    }
+
+    throw "Refusing to operate on untrusted path: $Path. Allowed base is $AllowedRoot."
+}
+
 function Clean-CefHash {
     param([string]$Hash)
     if ([string]::IsNullOrWhiteSpace($Hash)) {
@@ -64,7 +92,7 @@ function Extract-Sha256Token {
         return $null
     }
 
-    $match = [regex]::Match($Text, "(?i)\\b([0-9a-f]{64})\\b")
+    $match = [regex]::Match($Text, "(?i)\b([0-9a-f]{64})\b")
     if (!$match.Success) {
         return $null
     }
@@ -99,6 +127,11 @@ function Resolve-CefExpectedSha256 {
             $parts = $entry -split "\s+"
             if ($parts.Length -ge 2 -and $parts[0] -ieq $ArchiveName) {
                 $candidate = Clean-CefHash -Hash $parts[1]
+                if ($candidate.Length -eq 64) {
+                    return $candidate
+                }
+            } elseif ($parts.Length -ge 2 -and $parts[$parts.Length - 1] -ieq $ArchiveName) {
+                $candidate = Clean-CefHash -Hash $parts[0]
                 if ($candidate.Length -eq 64) {
                     return $candidate
                 }
@@ -381,7 +414,7 @@ function New-PortablePackage {
 
 $script:RepoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
 $outputPath = Resolve-RepoPath -Path $OutputDir
-$stagingPath = Resolve-RepoPath -Path $StagingRoot
+$stagingPath = Assert-PathUnder -Path (Resolve-RepoPath -Path $StagingRoot) -AllowedRoot (Join-Path $script:RepoRoot "dist")
 New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 New-Item -ItemType Directory -Force -Path $stagingPath | Out-Null
 

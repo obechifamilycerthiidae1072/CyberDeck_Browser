@@ -79,7 +79,6 @@ constexpr wchar_t kProtocolDialogClassName[] = L"CyberDeckProtocolWarningDialog"
 constexpr wchar_t kRemoteDebuggingHostEnv[] = L"CYBERDECK_CEF_REMOTE_DEBUGGING_HOST";
 constexpr wchar_t kRemoteDebuggingPortEnv[] = L"CYBERDECK_CEF_REMOTE_DEBUGGING_PORT";
 constexpr wchar_t kRemoteDebuggingAllowAllHostsEnv[] = L"CYBERDECK_CEF_ALLOW_NONLOCAL_REMOTE_DEBUGGING";
-constexpr wchar_t kDisableSandboxEnv[] = L"CYBERDECK_CEF_NO_SANDBOX";
 constexpr std::string kDefaultRemoteDebugAddress = "127.0.0.1";
 constexpr std::wstring_view kDefaultRemoteDebugAddressWide = L"127.0.0.1";
 
@@ -1556,13 +1555,12 @@ BrowserHost::InitializeResult BrowserHost::Initialize(HINSTANCE instance, common
     }
 
     CefSettings settings;
-    settings.no_sandbox = false;
+    settings.no_sandbox = true;
     settings.multi_threaded_message_loop = true;
     settings.persist_session_cookies = true;
-    if (EnvironmentBoolean(kDisableSandboxEnv)) {
-        settings.no_sandbox = true;
-        logger.Info("CEF sandbox disabled by CYBERDECK_CEF_NO_SANDBOX=1. This increases renderer compromise blast radius.");
-    }
+    logger.Info(
+        "CEF sandbox remains disabled for the current Windows executable packaging. "
+        "Do not flip this until the Windows CEF bootstrap/sandbox-info launch path is wired.");
 
     if (const auto remote_debugging_port = EnvironmentPort(kRemoteDebuggingPortEnv)) {
         settings.remote_debugging_port = *remote_debugging_port;

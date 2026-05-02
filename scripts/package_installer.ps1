@@ -66,6 +66,16 @@ function Assert-PathUnder {
     throw "Refusing to operate on untrusted path: $Path. Allowed base is $AllowedRoot."
 }
 
+function Resolve-RepoPath {
+    param([string]$Path)
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return $Path
+    }
+
+    return Join-Path $repoRoot $Path
+}
+
 function Copy-FilePattern {
     param(
         [string]$SourceDir,
@@ -177,7 +187,7 @@ if (Test-Path -LiteralPath $multiConfigExe) {
     throw "CyberDeckBrowser.exe was not found in '$buildRoot'. Run scripts\build_release.ps1 first."
 }
 
-$stageRoot = Assert-PathUnder -Path (Join-Path $repoRoot $PackageDir) -AllowedRoot $repoRoot
+$stageRoot = Assert-PathUnder -Path (Resolve-RepoPath -Path $PackageDir) -AllowedRoot (Join-Path $repoRoot "dist")
 $appStage = Join-Path $stageRoot "app"
 $outputPath = Join-Path $repoRoot $OutputDir
 $issPath = Join-Path $repoRoot "installer\CyberDeckBrowser.iss"

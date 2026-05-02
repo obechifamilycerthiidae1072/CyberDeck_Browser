@@ -2,8 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$CefUrl,
 
-    [string]$Destination = "third_party"
-    ,
+    [string]$Destination = "third_party",
     [string]$ExpectedSha256 = ""
 )
 
@@ -13,7 +12,7 @@ $root = Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")
 $destinationPath = Join-Path $root $Destination
 New-Item -ItemType Directory -Force -Path $destinationPath | Out-Null
 
-$archiveName = Split-Path -Leaf ([System.Uri]$CefUrl).AbsolutePath
+$archiveName = [System.Uri]::UnescapeDataString((Split-Path -Leaf ([System.Uri]$CefUrl).AbsolutePath))
 if (-not $archiveName) {
     throw "Could not determine archive name from URL."
 }
@@ -36,7 +35,7 @@ function Extract-Sha256Token {
         return $null
     }
 
-    $match = [regex]::Match($Text, "(?i)\\b([0-9a-f]{64})\\b")
+    $match = [regex]::Match($Text, "(?i)\b([0-9a-f]{64})\b")
     if (!$match.Success) {
         return $null
     }
@@ -70,6 +69,11 @@ function Resolve-CefExpectedSha256 {
             $parts = $entry -split "\s+"
             if ($parts.Length -ge 2 -and $parts[0] -ieq $ArchiveName) {
                 $candidate = Clean-CefHash -Hash $parts[1]
+                if ($candidate.Length -eq 64) {
+                    return $candidate
+                }
+            } elseif ($parts.Length -ge 2 -and $parts[$parts.Length - 1] -ieq $ArchiveName) {
+                $candidate = Clean-CefHash -Hash $parts[0]
                 if ($candidate.Length -eq 64) {
                     return $candidate
                 }
