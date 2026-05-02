@@ -76,6 +76,15 @@ std::string NarrowForLog(std::wstring_view value) {
 
 #if defined(CYBERDECK_HAS_CEF)
 constexpr wchar_t kProtocolDialogClassName[] = L"CyberDeckProtocolWarningDialog";
+constexpr wchar_t kRemoteDebuggingHostEnv[] = L"CYBERDECK_CEF_REMOTE_DEBUGGING_HOST";
+constexpr wchar_t kRemoteDebuggingPortEnv[] = L"CYBERDECK_CEF_REMOTE_DEBUGGING_PORT";
+constexpr wchar_t kRemoteDebuggingAllowAllHostsEnv[] = L"CYBERDECK_CEF_ALLOW_NONLOCAL_REMOTE_DEBUGGING";
+constexpr wchar_t kDisableSandboxEnv[] = L"CYBERDECK_CEF_NO_SANDBOX";
+constexpr std::string kDefaultRemoteDebugAddress = "127.0.0.1";
+constexpr std::wstring_view kDefaultRemoteDebugAddressWide = L"127.0.0.1";
+
+std::string g_remote_debugging_address = kDefaultRemoteDebugAddress;
+bool g_remote_debugging_enabled = false;
 
 bool IsMalformedAdClickPopup(std::wstring_view url) {
     const std::wstring lower = ToAsciiLower(url);
@@ -366,6 +375,51 @@ std::optional<int> EnvironmentPort(const wchar_t* name) {
     }
 
     return static_cast<int>(value);
+}
+
+std::optional<std::wstring> EnvironmentValue(const wchar_t* name) {
+    const DWORD required = GetEnvironmentVariableW(name, nullptr, 0);
+    if (required == 0) {
+        return std::nullopt;
+    }
+
+    std::wstring buffer(required, L'\0');
+    const DWORD copied = GetEnvironmentVariableW(name, buffer.data(), required);
+    if (copied == 0 || copied >= buffer.size()) {
+        return std::nullopt;
+    }
+    buffer.resize(copied);
+    return buffer;
+}
+
+std::wstring_view TrimAsciiWhitespace(std::wstring_view value) {
+    size_t start = 0;
+    while (start < value.size() && (value[start] <= L' ')) {
+        ++start;
+    }
+
+    size_t end = value.size();
+    while (end > start && (value[end - 1] <= L' ')) {
+        --end;
+    }
+
+    return value.substr(start, end - start);
+}
+
+bool EnvironmentBoolean(const wchar_t* name) {
+    const auto raw = EnvironmentValue(name);
+    if (!raw) {
+        return false;
+    }
+
+    const std::wstring value = ToAsciiLower(TrimAsciiWhitespace(*raw));
+    return value == L"1" || value == L"true" || value == L"yes" || value == L"on" || value == L"enable" ||
+           value == L"enabled";
+}
+
+bool IsLoopbackHost(std::wstring_view host) {
+    const std::wstring normalized = ToAsciiLower(host);
+    return normalized == L"127.0.0.1" || normalized == L"localhost" || normalized == L"::1";
 }
 #endif
 
@@ -1033,6 +1087,9 @@ struct BrowserHost::Impl {
             command_line->AppendSwitch("disable-extensions");
             command_line->AppendSwitch("disable-component-extensions-with-background-pages");
             command_line->AppendSwitch("disable-features=AutofillActorMode,GlicActorUi,LensOverlay");
+            if (g_remote_debugging_enabled && !g_remote_debugging_address.empty()) {
+                command_line->AppendSwitchWithValue("remote-debugging-address", g_remote_debugging_address);
+            }
         }
 
     private:
@@ -1499,12 +1556,33 @@ BrowserHost::InitializeResult BrowserHost::Initialize(HINSTANCE instance, common
     }
 
     CefSettings settings;
-    settings.no_sandbox = true;
+    settings.no_sandbox = false;
     settings.multi_threaded_message_loop = true;
     settings.persist_session_cookies = true;
-    if (const auto remote_debugging_port = EnvironmentPort(L"CYBERDECK_CEF_REMOTE_DEBUGGING_PORT")) {
+    if (EnvironmentBoolean(kDisableSandboxEnv)) {
+        settings.no_sandbox = true;
+        logger.Info("CEF sandbox disabled by CYBERDECK_CEF_NO_SANDBOX=1. This increases renderer compromise blast radius.");
+    }
+
+    if (const auto remote_debugging_port = EnvironmentPort(kRemoteDebuggingPortEnv)) {
         settings.remote_debugging_port = *remote_debugging_port;
-        logger.Info("CEF remote debugging enabled on 127.0.0.1:" + std::to_string(*remote_debugging_port) + ".");
+        std::wstring debug_host(kDefaultRemoteDebugAddressWide);
+        const bool allow_nonlocal = EnvironmentBoolean(kRemoteDebuggingAllowAllHostsEnv);
+        if (const auto raw_host = EnvironmentValue(kRemoteDebuggingHostEnv)) {
+            const std::wstring_view host = TrimAsciiWhitespace(*raw_host);
+            if (!host.empty() && (IsLoopbackHost(host) || allow_nonlocal)) {
+                debug_host = ToAsciiLower(host);
+            } else if (!host.empty()) {
+                logger.Info(
+                    "CYBERDECK_CEF_REMOTE_DEBUGGING_HOST is non-loopback and was ignored. "
+                    "Set CYBERDECK_CEF_ALLOW_NONLOCAL_REMOTE_DEBUGGING=1 to allow binding for a non-local interface.");
+            }
+        }
+
+        g_remote_debugging_enabled = true;
+        g_remote_debugging_address = NarrowForLog(debug_host);
+        logger.Info(
+            "CEF remote debugging enabled on " + g_remote_debugging_address + ":" + std::to_string(*remote_debugging_port) + ".");
     }
 
     const std::filesystem::path cef_data_dir = common::AppDataDirectory() / "cef";

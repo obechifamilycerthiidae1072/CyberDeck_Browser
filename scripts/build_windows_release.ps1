@@ -8,6 +8,7 @@ param(
     [string]$OutputDir = "dist\release-assets",
     [string]$StagingRoot = "dist\release-staging",
     [string]$IsccPath = "",
+    [string]$CefSha256 = "",
     [switch]$SkipDownload,
     [switch]$SkipInstaller,
     [switch]$SkipMediaProbe,
@@ -48,15 +49,130 @@ function Get-CefRootFromArchiveName {
     return [System.IO.Path]::GetFileNameWithoutExtension($name)
 }
 
+function Clean-CefHash {
+    param([string]$Hash)
+    if ([string]::IsNullOrWhiteSpace($Hash)) {
+        return ""
+    }
+
+    return ($Hash -replace '[^0-9A-Fa-f]', "").ToLowerInvariant()
+}
+
+function Extract-Sha256Token {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return $null
+    }
+
+    $match = [regex]::Match($Text, "(?i)\\b([0-9a-f]{64})\\b")
+    if (!$match.Success) {
+        return $null
+    }
+
+    return $match.Groups[1].Value.ToLowerInvariant()
+}
+
+function Resolve-CefExpectedSha256 {
+    param(
+        [string]$ArchiveName,
+        [string]$ArchivePath,
+        [string]$ArchiveUrl,
+        [string]$ProvidedHash
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ProvidedHash)) {
+        $normalized = Clean-CefHash -Hash $ProvidedHash
+        if ($normalized.Length -ne 64) {
+            throw "The provided -CefSha256 value is not a valid SHA-256 hash: $ProvidedHash"
+        }
+        return $normalized
+    }
+
+    $manifestPath = Join-Path $script:RepoRoot "scripts\cef_windows_downloads.sha256"
+    if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+        foreach ($line in Get-Content -LiteralPath $manifestPath) {
+            $entry = $line.Trim()
+            if ($entry.Length -eq 0 -or $entry.StartsWith("#")) {
+                continue
+            }
+
+            $parts = $entry -split "\s+"
+            if ($parts.Length -ge 2 -and $parts[0] -ieq $ArchiveName) {
+                $candidate = Clean-CefHash -Hash $parts[1]
+                if ($candidate.Length -eq 64) {
+                    return $candidate
+                }
+            }
+        }
+    }
+
+    $archiveSidecar = "${ArchivePath}.sha256"
+    if (Test-Path -LiteralPath $archiveSidecar -PathType Leaf) {
+        $candidate = Extract-Sha256Token -Text (Get-Content -Raw -LiteralPath $archiveSidecar)
+        if ($null -ne $candidate) {
+            return $candidate
+        }
+    }
+
+    try {
+        $checksumUrl = "$ArchiveUrl.sha256"
+        Write-Host "No local checksum available; fetching manifest from $checksumUrl"
+        $checksumResponse = Invoke-WebRequest -Uri $checksumUrl -UseBasicParsing -ErrorAction Stop
+        $candidate = Extract-Sha256Token -Text $checksumResponse.Content
+        if ($null -ne $candidate) {
+            return $candidate
+        }
+    } catch {
+        throw "Could not resolve SHA-256 checksum for '$ArchiveName'. Pass -CefSha256 with a trusted hash."
+    }
+
+    throw "Could not resolve a SHA-256 checksum for '$ArchiveName'. Pass -CefSha256 with a trusted hash."
+}
+
+function Get-FileSha256 {
+    param([string]$Path)
+    try {
+        return (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+    } catch {
+        return [BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.IO.File]::ReadAllBytes($Path))).ToLowerInvariant().Replace("-", "")
+    }
+}
+
+function Verify-CefArchive {
+    param(
+        [string]$ArchivePath,
+        [string]$ExpectedSha256
+    )
+
+    $expected = Clean-CefHash -Hash $ExpectedSha256
+    if ($expected.Length -ne 64) {
+        throw "Invalid expected SHA-256 hash length for '$ArchivePath'."
+    }
+
+    $actual = Get-FileSha256 -Path $ArchivePath
+    if ($actual -ne $expected) {
+        throw "SHA-256 check failed for '$ArchivePath'. Expected $expected but got $actual."
+    }
+
+    Write-Host "Verified CEF archive checksum: $([System.IO.Path]::GetFileName($ArchivePath))"
+}
+
 function Download-File {
     param(
         [string]$Url,
-        [string]$Destination
+        [string]$Destination,
+        [string]$ExpectedSha256
     )
 
     if (Test-Path -LiteralPath $Destination -PathType Leaf) {
-        Write-Host "CEF archive already exists: $Destination"
-        return
+        $existing = Get-FileSha256 -Path $Destination
+        if ($existing -eq (Clean-CefHash -Hash $ExpectedSha256)) {
+            Write-Host "CEF archive already exists and matches checksum: $Destination"
+            return
+        }
+
+        Write-Host "Existing CEF archive checksum mismatch; redownloading: $Destination"
+        Remove-Item -LiteralPath $Destination -Force
     }
 
     Write-Host "Downloading CEF:"
@@ -68,10 +184,12 @@ function Download-File {
         if ($LASTEXITCODE -ne 0) {
             throw "curl failed while downloading CEF."
         }
+        Verify-CefArchive -ArchivePath $Destination -ExpectedSha256 $ExpectedSha256
         return
     }
 
     Invoke-WebRequest -Uri $Url -OutFile $Destination
+    Verify-CefArchive -ArchivePath $Destination -ExpectedSha256 $ExpectedSha256
 }
 
 function Find-CSharpCompiler {
@@ -146,8 +264,10 @@ function Resolve-CefRoot {
     $downloadDir = Join-Path $script:RepoRoot "third_party\cef-downloads"
     $extractRoot = Join-Path $script:RepoRoot "third_party"
     $archivePath = Join-Path $downloadDir $archiveName
+    $expectedHash = Resolve-CefExpectedSha256 -ArchiveName $archiveName -ArchivePath $archivePath -ArchiveUrl $CefUrl -ProvidedHash $CefSha256
+    Write-Host "Resolved CEF SHA-256 checksum from trusted metadata."
     New-Item -ItemType Directory -Force -Path $downloadDir | Out-Null
-    Download-File -Url $CefUrl -Destination $archivePath
+    Download-File -Url $CefUrl -Destination $archivePath -ExpectedSha256 $expectedHash
     return Expand-CefArchive -ArchivePath $archivePath -DestinationRoot $extractRoot
 }
 

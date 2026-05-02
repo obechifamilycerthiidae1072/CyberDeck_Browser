@@ -16,6 +16,12 @@ That script downloads the default official Windows CEF binary distribution when
 installer files, verifies the CEF runtime, and creates a portable zip under
 `dist\release-assets`.
 
+If you do not trust the implicit manifest path, pass the checksum explicitly:
+
+```powershell
+.\scripts\build_windows_release.ps1 -SkipInstaller -CefSha256 "<trusted sha256>"
+```
+
 For release candidates, pass the release identifier explicitly so generated
 portable archives match the Git tag:
 
@@ -29,7 +35,8 @@ To build with a codec-enabled CEF distribution that you have licensed and trust:
 .\scripts\build_windows_release.ps1 `
   -CefUrl "https://example.com/cef_binary_<codec-enabled>_windows64.tar.bz2" `
   -CodecEnabledCef `
-  -AcceptCodecResponsibility
+  -AcceptCodecResponsibility `
+  -CefSha256 "<trusted sha256>"
 ```
 
 or:

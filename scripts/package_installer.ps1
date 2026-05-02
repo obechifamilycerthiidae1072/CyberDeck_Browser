@@ -38,6 +38,34 @@ function Resolve-Iscc {
     throw "Inno Setup compiler ISCC.exe was not found. Install Inno Setup 6 or pass -IsccPath."
 }
 
+function Normalize-DirectoryPath {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        throw "Path is empty."
+    }
+
+    return ([System.IO.Path]::GetFullPath($Path)).TrimEnd('\', '/')
+}
+
+function Assert-PathUnder {
+    param(
+        [string]$Path,
+        [string]$AllowedRoot
+    )
+
+    $full_path = Normalize-DirectoryPath -Path $Path
+    $root = Normalize-DirectoryPath -Path $AllowedRoot
+    $separator = [IO.Path]::DirectorySeparatorChar
+    $root_with_separator = $root.TrimEnd($separator) + $separator
+
+    if ($full_path -eq $root -or $full_path.StartsWith($root_with_separator, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $full_path
+    }
+
+    throw "Refusing to operate on untrusted path: $Path. Allowed base is $AllowedRoot."
+}
+
 function Copy-FilePattern {
     param(
         [string]$SourceDir,
@@ -149,7 +177,7 @@ if (Test-Path -LiteralPath $multiConfigExe) {
     throw "CyberDeckBrowser.exe was not found in '$buildRoot'. Run scripts\build_release.ps1 first."
 }
 
-$stageRoot = Join-Path $repoRoot $PackageDir
+$stageRoot = Assert-PathUnder -Path (Join-Path $repoRoot $PackageDir) -AllowedRoot $repoRoot
 $appStage = Join-Path $stageRoot "app"
 $outputPath = Join-Path $repoRoot $OutputDir
 $issPath = Join-Path $repoRoot "installer\CyberDeckBrowser.iss"

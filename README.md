@@ -104,6 +104,17 @@ placeholder build.
 
 More details are in `docs/CEF_SETUP.md`.
 
+Security note:
+
+- `CYBERDECK_CEF_NO_SANDBOX=1` disables CEF sandboxing and should only be used
+  for explicit local troubleshooting.
+- `CYBERDECK_CEF_REMOTE_DEBUGGING_PORT` enables remote debugging and binds by
+  default to `127.0.0.1`.
+- `CYBERDECK_CEF_REMOTE_DEBUGGING_HOST` may set a custom debug bind host only when
+  `CYBERDECK_CEF_ALLOW_NONLOCAL_REMOTE_DEBUGGING=1`.
+- `-CefSha256` in `build_windows_release.ps1` or `ExpectedSha256` in
+  `download_cef.ps1` pins trusted CEF archive checksums.
+
 Linux CEF install:
 
 ```bash
@@ -134,7 +145,7 @@ Full Windows release helper, including CEF download, CEF-required build,
 runtime verification, installer staging, and portable zip:
 
 ```powershell
-.\scripts\build_windows_release.ps1 -SkipInstaller
+.\scripts\build_windows_release.ps1 -SkipInstaller -CefSha256 "<trusted sha256>"
 ```
 
 Placeholder non-CEF build:

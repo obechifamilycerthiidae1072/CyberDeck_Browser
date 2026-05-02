@@ -40,8 +40,20 @@ Or use the Windows release helper to download the default official CEF build
 and produce a CEF-enabled release package:
 
 ```powershell
-.\scripts\build_windows_release.ps1 -SkipInstaller
+.\scripts\build_windows_release.ps1 -SkipInstaller -CefSha256 "<trusted sha256>"
 ```
+
+Use this helper when checksum pinning is required:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\download_cef.ps1 `
+  -CefUrl "https://cef-builds.spotifycdn.com/<cef-archive>.tar.bz2" `
+  -ExpectedSha256 "<trusted sha256>"
+```
+
+`build_windows_release.ps1` checks `scripts\cef_windows_downloads.sha256` for the
+default archive checksum. If no trusted checksum is found locally or from a
+matching `.sha256` sidecar, it requires an explicit checksum argument.
 
 To require CEF during configure:
 
