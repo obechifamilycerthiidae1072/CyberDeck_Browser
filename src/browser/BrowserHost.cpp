@@ -103,9 +103,6 @@ bool ShouldSkipTerminalModeForUrl(std::wstring_view url) {
     return Contains(lower, L"://www.youtube.com/") ||
            Contains(lower, L"://youtube.com/") ||
            Contains(lower, L"://youtu.be/") ||
-           Contains(lower, L"://www.reddit.com/") ||
-           Contains(lower, L"://reddit.com/") ||
-           Contains(lower, L"://v.redd.it/") ||
            Contains(lower, L"://www.twitch.tv/") ||
            Contains(lower, L"://twitch.tv/") ||
            Contains(lower, L"://vimeo.com/");

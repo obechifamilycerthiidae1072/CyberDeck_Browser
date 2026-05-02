@@ -341,6 +341,11 @@ start "" "%~dp0App\CyberDeckBrowser.exe" %*
     $sourcePath = Join-Path $script:RepoRoot "scripts\CyberDeckPortableLauncher.cs"
     $exePath = Join-Path $PortableRoot "CyberdeckPortable.exe"
     $iconPath = Join-Path $PortableRoot "CyberdeckPortable.ico"
+    $repoIconPath = Join-Path $script:RepoRoot "assets\windows\CyberdeckPortable.ico"
+    if (Test-Path -LiteralPath $repoIconPath -PathType Leaf) {
+        Copy-Item -LiteralPath $repoIconPath -Destination $iconPath -Force
+    }
+
     $compileArgs = @(
         "/nologo",
         "/target:winexe",
